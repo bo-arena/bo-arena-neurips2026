@@ -281,6 +281,8 @@ class TuRBO(AskTellAgent):
 
         # No need to fit model when init buffer is still being unrolled
         elif self._restart_buffer.shape[0] == 0:
+            if self.state.best_value == -float("inf"):
+                self.state.best_value = self.train_y.max().item()
             self._fit_model()
 
     def ask(self, n: int, seed: int) -> Float[np.ndarray, "{n} D"]:

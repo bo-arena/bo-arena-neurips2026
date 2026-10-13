@@ -134,6 +134,7 @@ class SAASBO(AskTellAgent):
         import jax  # noqa: PLC0415
 
         jax.clear_caches()
+        torch.cuda.empty_cache()
 
     def tell_initial_data(self, data: Dataset, seed: int) -> None:
         """Provide initial observations to the agent and fit the SAAS GP model.

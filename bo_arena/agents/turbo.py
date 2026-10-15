@@ -328,53 +328,26 @@ class TuRBO(AskTellAgent):
         # Get trust region bounds (in [0,1]^d space)
         tr_lb, tr_ub = self._get_trust_region_bounds(x_center, self.state.length)
 
-        # Use Sobol to generate perturbations
         if self.acqf_opt_strategy == "default":
             n_candidates = min(100 * self.input_dim, 5000)
         elif self.acqf_opt_strategy in {"no_raasp", "raasp"}:
             # For "no_raasp" and "raasp" we fix the number of candidates
             n_candidates = 5000
-        sobol = SobolEngine(self.input_dim, scramble=True, seed=seed)
-        sobol_samples = sobol.draw(n_candidates).to(
-            dtype=self.dtype, device=self.device
+
+        if self.acqf_opt_strategy in {"raasp", "default"}:
+            cand_sampling_method = "raasp"
+        elif self.acqf_opt_strategy == "no_raasp":
+            cand_sampling_method = "sobol"
+        X_cand = get_candidates(
+            n_candidates=n_candidates,
+            lb=tr_lb,
+            ub=tr_ub,
+            best_x=x_center,
+            seed=seed,
+            method=cand_sampling_method,
+            dtype=self.dtype,
+            device=self.device,
         )
-        sobol_samples = tr_lb + (tr_ub - tr_lb) * sobol_samples
-
-        if self.acqf_opt_strategy in {"default", "raasp"}:
-            # Candidates are formed by perturbing (a subset of dimensions of) the
-            # center point within the trust region.
-            prob_perturb = min(20.0 / self.input_dim, 1.0)
-            generator = torch.Generator(device=self.device).manual_seed(seed)
-            mask = (
-                torch.rand(
-                    n_candidates,
-                    self.input_dim,
-                    dtype=self.dtype,
-                    device=self.device,
-                    generator=generator,
-                )
-                <= prob_perturb
-            )
-            # Ensure at least one dimension is perturbed for each candidate
-            ind = torch.where(mask.sum(dim=1) == 0)[0]
-            if len(ind) > 0:
-                mask[
-                    ind,
-                    torch.randint(
-                        0,
-                        self.input_dim,
-                        size=(len(ind),),
-                        device=self.device,
-                        generator=generator,
-                    ),
-                ] = 1
-
-            # Create candidate points from the center with perturbations
-            X_cand = x_center.expand(n_candidates, self.input_dim).clone()
-            X_cand[mask] = sobol_samples[mask]
-        else:
-            # For "no_raasp", candidates are sampled uniformly within the trust region
-            X_cand = sobol_samples
 
         # Sample on the candidate points using Thompson Sampling
         with gpytorch.settings.max_cholesky_size(float("inf")):  # Always use Cholesky

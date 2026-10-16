@@ -10,7 +10,7 @@ dependencies = [
     "wandb>=0.25.1,<0.26",
     "numpy>=2.4,<3",
     "scipy>=1.17,<2",
-    "bencherscaffold@git+https://github.com/LeoIV/BencherScaffold@e1c714c30c00b8a699ff87390229e604ebc31cec",
+    "bencherscaffold@git+https://github.com/LeoIV/BencherScaffold@c119035a059cf34c82c3183fa53634070df3a3d6",
     "torch>=2.11,<3",
     "botorch[fully_bayesian]>=0.18.1,<0.19",
     "jax[cuda12]>=0.4.35,<0.10; sys_platform == 'linux'",

@@ -8,6 +8,7 @@ from bencherscaffold.protoclasses.bencher_pb2 import Value
 from jaxtyping import Float
 
 from bo_arena.problems.metadata import PROBLEM_METADATA, ProblemMetadata
+from bo_arena.utils.dataset import Dataset
 
 
 class Problem:
@@ -30,16 +31,14 @@ class Problem:
         return self.name
 
     @abstractmethod
-    def evaluate_points(
-        self, points: Float[np.ndarray, "N D"]
-    ) -> Float[np.ndarray, " N"]:
+    def evaluate_points(self, points: Float[np.ndarray, "N D"]) -> Dataset:
         """Evaluate the problem at the given points.
 
         Args:
             points: Points to evaluate.
 
         Returns:
-            Evaluations at the given points.
+            Dataset containing the evaluated points and their objective values.
         """
         msg = "This method should be implemented by subclasses."
         raise NotImplementedError(msg)
@@ -72,25 +71,27 @@ class BencherProblem(Problem):
         super().__init__(name, metadata)
         self.bencher_client = BencherClient(address=address, port=port)
 
-    def evaluate_points(
-        self, points: Float[np.ndarray, "N D"]
-    ) -> Float[np.ndarray, " N"]:
+    def evaluate_points(self, points: Float[np.ndarray, "N D"]) -> Dataset:
         """Evaluate the problem at the given points.
+
+        Bencher problems are minimization problems, so the objective values are
+        negated to follow the maximization convention.
 
         Args:
             points: Points to evaluate.
 
         Returns:
-            Evaluations at the given points.
+            Dataset containing the evaluated points and their objective values.
         """
-        evaluations = []
+        objectives = []
         for point in points:
             bencher_point = [
                 Value(type=self.metadata.input_type, value=float(d)) for d in point
             ]
-            value = self.bencher_client.evaluate_point(
+            result = self.bencher_client.evaluate_point(
                 benchmark_name=self.name,
                 point=bencher_point,
             )
-            evaluations.append(value)
-        return -np.array(evaluations)  # turn minimization into maximization for BoTorch
+            # Turn minimization into maximization for BoTorch.
+            objectives.append([-objective.value for objective in result.objectives])
+        return Dataset(X=points, objectives=np.array(objectives))

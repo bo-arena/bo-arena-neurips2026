@@ -47,7 +47,9 @@ def test_seed_determinism(agent_name: str) -> None:
     result_2 = run_arena(seed=42)
 
     np.testing.assert_array_equal(result_1.observed_data.X, result_2.observed_data.X)
-    np.testing.assert_array_equal(result_1.observed_data.y, result_2.observed_data.y)
+    np.testing.assert_array_equal(
+        result_1.observed_data.objectives, result_2.observed_data.objectives
+    )
 
 
 @pytest.mark.parametrize("agent_name", AGENT_PARAMS)
@@ -89,7 +91,7 @@ def test_observed_data_is_float64() -> None:
     result = arena.run()
 
     assert result.observed_data.X.dtype == np.float64
-    assert result.observed_data.y.dtype == np.float64
+    assert result.observed_data.objectives.dtype == np.float64
 
 
 def test_seed_spawning_is_deterministic() -> None:

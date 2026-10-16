@@ -277,7 +277,7 @@ def main() -> None:  # ruff: ignore[too-many-statements]
 
     # Save results
     np.save(xs_file, result.observed_data.X)
-    np.save(ys_file, result.observed_data.y)
+    np.save(ys_file, result.observed_data.objectives[:, 0])
     np.savez(
         times_file,
         ask=np.array(result.ask_times),

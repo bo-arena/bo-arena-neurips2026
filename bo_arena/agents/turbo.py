@@ -219,8 +219,8 @@ class TuRBO(AskTellAgent):
         """
         self.train_X = torch.tensor(data.X, dtype=self.dtype, device=self.device)
         self.train_y = torch.tensor(
-            data.y, dtype=self.dtype, device=self.device
-        ).unsqueeze(-1)
+            data.objectives, dtype=self.dtype, device=self.device
+        )
 
         self.n_init = self.train_X.shape[0]  # Used for TuRBO restarts
 
@@ -250,7 +250,7 @@ class TuRBO(AskTellAgent):
             raise RuntimeError(msg)
 
         new_X = torch.tensor(data.X, dtype=self.dtype, device=self.device)
-        new_y = torch.tensor(data.y, dtype=self.dtype, device=self.device).unsqueeze(-1)
+        new_y = torch.tensor(data.objectives, dtype=self.dtype, device=self.device)
 
         # Don't update the trust region if new_y is still from init buffer
         if self.model:

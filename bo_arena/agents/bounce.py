@@ -661,8 +661,8 @@ class Bounce(AskTellAgent):
         X_full_01 = torch.tensor(data.X, dtype=self.dtype, device=self.device)
         self.train_X = project_down(X_full_01, self.S)
         self.train_y = torch.tensor(
-            data.y, dtype=self.dtype, device=self.device
-        ).unsqueeze(-1)
+            data.objectives, dtype=self.dtype, device=self.device
+        )
 
         self.n_init = self.train_X.shape[0]  # Used for Bounce restarts
         self.state.n_evals = self.train_X.shape[0]
@@ -692,7 +692,7 @@ class Bounce(AskTellAgent):
 
         X_full_01 = torch.tensor(data.X, dtype=self.dtype, device=self.device)
         new_X = project_down(X_full_01, self.S)
-        new_y = torch.tensor(data.y, dtype=self.dtype, device=self.device).unsqueeze(-1)
+        new_y = torch.tensor(data.objectives, dtype=self.dtype, device=self.device)
 
         batch_size = new_X.shape[0]
 

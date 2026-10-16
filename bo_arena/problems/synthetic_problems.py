@@ -9,6 +9,7 @@ from jaxtyping import Float
 
 from bo_arena.problems import Problem
 from bo_arena.problems.metadata import SYNTHETIC_PROBLEM_METADATA, ProblemMetadata
+from bo_arena.utils.dataset import Dataset
 
 # Standard Hartmann 6D constants: https://www.sfu.ca/~ssurjano/hart6.html
 _ALPHA = np.array([1.0, 1.2, 3.0, 3.2])
@@ -78,16 +79,16 @@ class Hartmann6D(Problem):
 
     def evaluate_points(  # ruff: ignore[no-self-use]
         self, points: Float[np.ndarray, "N D"]
-    ) -> Float[np.ndarray, " N"]:
+    ) -> Dataset:
         """Evaluate the Hartmann 6D function at the given points.
 
         Args:
             points: Points to evaluate.
 
         Returns:
-            Function values.
+            Dataset containing the evaluated points and their function values.
         """
-        return _hartmann6d(points[:, :6])
+        return Dataset(X=points, objectives=_hartmann6d(points[:, :6])[:, None])
 
 
 class Ackley(Problem):
@@ -119,21 +120,21 @@ class Ackley(Problem):
         self._lower = self._botorch_ackley.bounds[0].numpy()
         self._upper = self._botorch_ackley.bounds[1].numpy()
 
-    def evaluate_points(
-        self, points: Float[np.ndarray, "N D"]
-    ) -> Float[np.ndarray, " N"]:
+    def evaluate_points(self, points: Float[np.ndarray, "N D"]) -> Dataset:
         """Evaluate the Ackley function at the given points.
 
         Args:
             points: Points in [0, 1]^D to evaluate.
 
         Returns:
-            Function values.
+            Dataset containing the evaluated points and their function values.
         """
         points = points.astype(np.float64)
         scaled = self._lower + points * (self._upper - self._lower)
         x = torch.from_numpy(scaled)
-        return self._botorch_ackley(x).cpu().numpy()
+        return Dataset(
+            X=points, objectives=self._botorch_ackley(x).cpu().numpy()[:, None]
+        )
 
 
 class Michalewicz(Problem):
@@ -164,21 +165,21 @@ class Michalewicz(Problem):
         self._lower = self._botorch_michalewicz.bounds[0].numpy()
         self._upper = self._botorch_michalewicz.bounds[1].numpy()
 
-    def evaluate_points(
-        self, points: Float[np.ndarray, "N D"]
-    ) -> Float[np.ndarray, " N"]:
+    def evaluate_points(self, points: Float[np.ndarray, "N D"]) -> Dataset:
         """Evaluate the Michalewicz function at the given points.
 
         Args:
             points: Points in [0, 1]^D to evaluate.
 
         Returns:
-            Function values.
+            Dataset containing the evaluated points and their function values.
         """
         points = points.astype(np.float64)
         scaled = self._lower + points * (self._upper - self._lower)
         x = torch.from_numpy(scaled)
-        return self._botorch_michalewicz(x).cpu().numpy()
+        return Dataset(
+            X=points, objectives=self._botorch_michalewicz(x).cpu().numpy()[:, None]
+        )
 
 
 class StyblinskiTang(Problem):
@@ -209,18 +210,18 @@ class StyblinskiTang(Problem):
         self._lower = self._botorch_styblinski_tang.bounds[0].numpy()
         self._upper = self._botorch_styblinski_tang.bounds[1].numpy()
 
-    def evaluate_points(
-        self, points: Float[np.ndarray, "N D"]
-    ) -> Float[np.ndarray, " N"]:
+    def evaluate_points(self, points: Float[np.ndarray, "N D"]) -> Dataset:
         """Evaluate the Styblinski-Tang function at the given points.
 
         Args:
             points: Points in [0, 1]^D to evaluate.
 
         Returns:
-            Function values.
+            Dataset containing the evaluated points and their function values.
         """
         points = points.astype(np.float64)
         scaled = self._lower + points * (self._upper - self._lower)
         x = torch.from_numpy(scaled)
-        return self._botorch_styblinski_tang(x).cpu().numpy()
+        return Dataset(
+            X=points, objectives=self._botorch_styblinski_tang(x).cpu().numpy()[:, None]
+        )

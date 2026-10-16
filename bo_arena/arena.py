@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from logging import Logger
 
 import numpy as np
+from jaxtyping import Float
 from wandb import Run
 
 from bo_arena.agents import AskTellAgent
@@ -84,7 +85,32 @@ class Arena:
         self.wandb_run = wandb_run
         self.observed_data = Dataset(
             np.empty((0, self.problem.metadata.input_dim), dtype=np.float64),
-            np.empty(0, dtype=np.float64),
+            np.empty((0, 1), dtype=np.float64),
+        )
+
+    def _evaluate(self, points: Float[np.ndarray, "N D"]) -> Dataset:
+        """Evaluate points on the problem, returning float64 data.
+
+        Args:
+            points: Points to evaluate.
+
+        Returns:
+            Dataset containing the evaluated points and their objective values.
+
+        Raises:
+            ValueError: If the problem returns more than one objective, as
+                multi-objective problems are not yet supported.
+        """
+        data = self.problem.evaluate_points(points)
+        if data.n_objectives != 1:
+            msg = (
+                f"Problem '{self.problem}' returned {data.n_objectives} objectives, "
+                "but only single-objective problems are currently supported."
+            )
+            raise ValueError(msg)
+        return Dataset(
+            X=data.X.astype(np.float64),
+            objectives=data.objectives.astype(np.float64),
         )
 
     def run(self) -> RunResult:  # ruff: ignore[too-many-statements]
@@ -147,12 +173,9 @@ class Arena:
                 input_space.lower_bounds,
                 input_space.upper_bounds,
             )
-        initial_observations = self.problem.evaluate_points(initial_points).astype(
-            np.float64
-        )
-        self.observed_data = self.observed_data + Dataset(
-            initial_points, initial_observations
-        )
+        initial_data = self._evaluate(initial_points)
+        self.observed_data = self.observed_data + initial_data
+        initial_observations = initial_data.objectives[:, 0]
         seed = generate_seed(tell_init_key)
         seed_everything(seed)
         self.agent.tell_initial_data(self.observed_data, seed)
@@ -212,14 +235,11 @@ class Arena:
 
             # Evaluate the problem at the new points.
             start = time.perf_counter()
-            new_observations = self.problem.evaluate_points(new_points).astype(
-                np.float64
-            )
+            new_points_dataset = self._evaluate(new_points)
             eval_time = time.perf_counter() - start
             eval_times.append(eval_time)
 
             # Update the observed data with the new points and observations.
-            new_points_dataset = Dataset(new_points, new_observations)
             self.observed_data = self.observed_data + new_points_dataset
 
             # Provide the new observations to the agent.
@@ -233,9 +253,10 @@ class Arena:
             # Log iteration info (note, only logs info about the entire batch, not
             # individual points).
             actual_batch_size = new_points.shape[0]
+            observations = self.observed_data.objectives[:, 0]
             if self.logger is not None:
-                new_best_in_batch = np.max(new_observations) > np.max(
-                    self.observed_data.y[:-actual_batch_size]
+                new_best_in_batch = np.max(observations[-actual_batch_size:]) > np.max(
+                    observations[:-actual_batch_size]
                 )
                 self.logger.info(
                     f"BO loop iteration {batch_idx + 1}:\n"
@@ -243,7 +264,7 @@ class Arena:
                     f"  Ask time: {ask_time:.4f}s\n"
                     f"  Eval time: {eval_time:.4f}s\n"
                     f"  Tell time: {tell_time:.4f}s\n"
-                    f"  Best observation: {float(np.max(self.observed_data.y)):.4f}\n"
+                    f"  Best observation: {float(np.max(observations)):.4f}\n"
                     f"  New best observation in current batch: {new_best_in_batch}"
                 )
 
@@ -251,8 +272,8 @@ class Arena:
             if self.wandb_run is not None:
                 batch_start = self.observed_data.n - actual_batch_size
                 for iter in range(batch_start, self.observed_data.n):
-                    observation_val = float(self.observed_data.y[iter])
-                    best_val_so_far = float(np.max(self.observed_data.y[: iter + 1]))
+                    observation_val = float(observations[iter])
+                    best_val_so_far = float(np.max(observations[: iter + 1]))
                     is_best_observation = observation_val == best_val_so_far
                     self.wandb_run.log({
                         "batch_index": batch_idx + 1,

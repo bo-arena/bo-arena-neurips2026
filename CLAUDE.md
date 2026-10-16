@@ -10,7 +10,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 # Install all dependencies (uses uv)
-uv sync --all-extras
+uv sync --locked --all-groups
 
 # Run all tests
 uv run pytest tests

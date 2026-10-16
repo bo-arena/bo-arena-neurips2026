@@ -83,8 +83,8 @@ class Arena:
         self.logger = logger
         self.wandb_run = wandb_run
         self.observed_data = Dataset(
-            np.empty((0, self.problem.metadata.input_dim), dtype=np.float32),
-            np.empty(0, dtype=np.float32),
+            np.empty((0, self.problem.metadata.input_dim), dtype=np.float64),
+            np.empty(0, dtype=np.float64),
         )
 
     def run(self) -> RunResult:  # ruff: ignore[too-many-statements]
@@ -139,16 +139,16 @@ class Arena:
                 self.n_initial_points,
                 seed,
             )
-        initial_points = initial_points.astype(np.float32)
+        initial_points = initial_points.astype(np.float64)
         input_space = self.problem.metadata.input_space
         if isinstance(input_space, ContinuousInputSpace):
             initial_points = np.clip(
                 initial_points,
-                input_space.lower_bounds.astype(np.float32),
-                input_space.upper_bounds.astype(np.float32),
+                input_space.lower_bounds,
+                input_space.upper_bounds,
             )
         initial_observations = self.problem.evaluate_points(initial_points).astype(
-            np.float32
+            np.float64
         )
         self.observed_data = self.observed_data + Dataset(
             initial_points, initial_observations
@@ -202,18 +202,18 @@ class Arena:
             new_points = self.agent.ask(n_ask, seed)
             ask_time = time.perf_counter() - start
             ask_times.append(ask_time)
-            new_points = new_points.astype(np.float32)
+            new_points = new_points.astype(np.float64)
             if isinstance(input_space, ContinuousInputSpace):
                 new_points = np.clip(
                     new_points,
-                    input_space.lower_bounds.astype(np.float32),
-                    input_space.upper_bounds.astype(np.float32),
+                    input_space.lower_bounds,
+                    input_space.upper_bounds,
                 )
 
             # Evaluate the problem at the new points.
             start = time.perf_counter()
             new_observations = self.problem.evaluate_points(new_points).astype(
-                np.float32
+                np.float64
             )
             eval_time = time.perf_counter() - start
             eval_times.append(eval_time)

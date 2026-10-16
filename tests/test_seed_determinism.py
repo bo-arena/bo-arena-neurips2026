@@ -74,8 +74,8 @@ def test_different_seeds_give_different_results(agent_name: str) -> None:
     assert not np.array_equal(result_1.observed_data.X, result_2.observed_data.X)
 
 
-def test_observed_data_is_float32() -> None:
-    """Arena.run() should return float32 arrays for both X and y."""
+def test_observed_data_is_float64() -> None:
+    """Arena.run() should return float64 arrays for both X and y."""
     problem = Hartmann6D(embed_dim=100)
     agent = Random(input_dim=problem.metadata.input_dim)
     arena = Arena(
@@ -88,8 +88,8 @@ def test_observed_data_is_float32() -> None:
     )
     result = arena.run()
 
-    assert result.observed_data.X.dtype == np.float32
-    assert result.observed_data.y.dtype == np.float32
+    assert result.observed_data.X.dtype == np.float64
+    assert result.observed_data.y.dtype == np.float64
 
 
 def test_seed_spawning_is_deterministic() -> None:

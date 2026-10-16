@@ -1,6 +1,6 @@
 #!/bin/bash
 # Usage: slurm/submit.sh <script_name> [extra sbatch args...]
-# Example: slurm/submit.sh run_cpu_bo_arena_singularity.sbatch
+# Example: slurm/submit.sh sync_wandb.sbatch
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 CONFIG="$SCRIPT_DIR/config.sh"

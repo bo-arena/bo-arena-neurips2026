@@ -26,9 +26,6 @@ RESULTS_DIR = ROOT_DIR / "results"
 
 logger = logging.getLogger(__name__)
 
-WANDB_ENTITY = "bo-arena"
-WANDB_PROJECT = "bo-arena-v2"
-
 
 def parse_args() -> argparse.Namespace:
     """Parse command line arguments."""
@@ -130,6 +127,18 @@ def main() -> None:  # ruff: ignore[too-many-statements]
 
     args = parse_args()
     seed = EXPERIMENT_SEEDS[args.seed_idx]
+
+    # wandb.init() reads the entity and project from these environment variables.
+    if not args.no_wandb:
+        missing = [
+            v for v in ("WANDB_ENTITY", "WANDB_PROJECT") if not os.environ.get(v)
+        ]
+        if missing:
+            msg = (
+                f"Environment variables {', '.join(missing)} must be set for WandB "
+                "logging (see slurm/config.sh.example), or pass --no-wandb."
+            )
+            raise RuntimeError(msg)
 
     # Initialize Problem and Agent
     if args.problem == "ackley_dim_100":
@@ -254,8 +263,6 @@ def main() -> None:  # ruff: ignore[too-many-statements]
     if not args.no_wandb:
         os.environ["WANDB_MODE"] = "offline"
         wandb_run = wandb.init(
-            entity=WANDB_ENTITY,
-            project=WANDB_PROJECT,
             name=f"seed_{seed}",
             group=wandb_group,
             config={**config, "seed": seed},

@@ -161,8 +161,12 @@ def _format_mem(mb: int) -> str:
     return f"{mb}M"
 
 
-def parse_config_sh() -> dict[str, str]:
-    """Read key=value pairs from slurm/config.sh."""
+def parse_config_sh(*, require_wandb: bool = True) -> dict[str, str]:
+    """Read key=value pairs from slurm/config.sh.
+
+    Args:
+        require_wandb: Whether the WandB keys must be present in config.sh.
+    """
     config_path = SCRIPT_DIR / "config.sh"
     if not config_path.exists():
         print(
@@ -182,6 +186,8 @@ def parse_config_sh() -> dict[str, str]:
             config[key.strip()] = value.strip().strip('"').strip("'")
 
     required_keys = ["REPO", "LOGS", "CPU_PARTITION", "GPU_PARTITION"]
+    if require_wandb:
+        required_keys += ["WANDB_API_KEY", "WANDB_ENTITY", "WANDB_PROJECT"]
     missing = [k for k in required_keys if not config.get(k)]
     if missing:
         print(
@@ -241,6 +247,8 @@ def build_sbatch_cmd(
     batch_size: int | None = None,
     n_evals: int | None = None,
     n_init: int | None = None,
+    *,
+    no_wandb: bool = False,
 ) -> list[str]:
     """Build the sbatch command for a single experiment combination."""
     profile = get_profile(agent, problem)
@@ -264,6 +272,8 @@ def build_sbatch_cmd(
         export_parts.append(f"BATCH_SIZE={batch_size}")
     if n_init is not None:
         export_parts.append(f"N_INIT={n_init}")
+    if no_wandb:
+        export_parts.append("NO_WANDB=1")
     export_vars = ",".join(export_parts)
 
     cmd = [
@@ -337,6 +347,11 @@ def main() -> None:
         help="Number of initial points (overrides problem default)",
     )
     parser.add_argument(
+        "--no-wandb",
+        action="store_true",
+        help="Disable WandB logging (results are still saved locally)",
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Print sbatch commands without submitting",
@@ -349,7 +364,7 @@ def main() -> None:
             "Expected a SLURM array spec like '0-9', '0,2,4', or '0-9%3'."
         )
 
-    config = parse_config_sh()
+    config = parse_config_sh(require_wandb=not args.no_wandb)
     Path(config["LOGS"]).mkdir(parents=True, exist_ok=True)
 
     problems = [s.strip() for s in args.problem.split(",")]
@@ -376,6 +391,7 @@ def main() -> None:
             batch_size=args.batch_size,
             n_evals=args.n_evals,
             n_init=args.n_init,
+            no_wandb=args.no_wandb,
         )
         profile = get_profile(agent, problem)
         mem = resolve_mem(agent, problem)

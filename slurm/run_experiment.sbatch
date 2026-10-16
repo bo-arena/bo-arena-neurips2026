@@ -16,6 +16,7 @@
 #   N_EVALS            - total number of evaluations (overrides problem default)
 #   BATCH_SIZE         - batch size for candidate generation (default: 1)
 #   N_INIT             - number of initial points (overrides problem default)
+#   NO_WANDB           - if non-empty, disable WandB logging
 
 source "$(pwd)/slurm/preamble.sh"
 
@@ -150,6 +151,8 @@ singularity exec \
     --env TMPDIR=${TMPDIR:-/tmp} \
     --env OMP_NUM_THREADS=$OMP_NUM_THREADS \
     --env WANDB_API_KEY=$WANDB_API_KEY \
+    --env WANDB_ENTITY=$WANDB_ENTITY \
+    --env WANDB_PROJECT=$WANDB_PROJECT \
     --env PYTHONPATH=/workspace/bo-arena \
     images/bo_arena.sif \
     bash -c "
@@ -164,5 +167,6 @@ singularity exec \
             --dtype float64 \
             ${N_EVALS:+--n-evals $N_EVALS} \
             ${BATCH_SIZE:+--batch-size $BATCH_SIZE} \
-            ${N_INIT:+--n-init $N_INIT}
+            ${N_INIT:+--n-init $N_INIT} \
+            ${NO_WANDB:+--no-wandb}
     "

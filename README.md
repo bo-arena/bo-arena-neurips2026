@@ -38,9 +38,10 @@ We use Unix sockets rather than fixed TCP ports to prevent different SLURM jobs 
 > Important - The run_experiment.sbatch script creates socket files for communicating with bencher under the directory $TMPDIR/bencher-$SLURM_JOB_ID (falling back to /tmp/bencher-$SLURM_JOB_ID if $TMPDIR is not set). The script generally removes this directory (and the created sockets) once it has finished running, but some cases (e.g. SIGKILL) it will not. Ideally $TMPDIR should be a job-specific temporary directory, so it will get deleted once the job finishes running in any case (on many clusters this is the case). If not, be careful, as $TMPDIR could get cluttered with directories containing socket files.
 
 In order to run experiments, follow these steps:
-1. Copy `slurm/config.sh.example` to `slurm/config.sh` and fill in your cluster-specific paths and partition names. This file is gitignored and must be created by each user.
-2. Fill in your Weights and Biases entity and project name in the `WANDB_ENTITY` and `WANDB_PROJECT` variables in `scripts/experiment_runner.py`.
-3. Obtain the Singularity images, which are expected to be in an `images/` directory.
+1. Copy `slurm/config.sh.example` to `slurm/config.sh` and fill in your
+cluster-specific paths, partition names and WandB credentials (if running with WandB,
+as is the default behaviour). This file is gitignored and must be created by each user.
+2. Obtain the Singularity images, which are expected to be in an `images/` directory.
     - **`bencher`**: build with `sbatch build_bencher_singularity.sbatch` or just pull the published image (easier than having to build it yourself). The socket support above requires `bencherscaffold >= 0.5.2` (previous versions bind to TCP ports instead of Unix sockets), which the latest published image satisfies:
       ```
       singularity pull images/bencher.sif docker://gaunab/bencher:latest
@@ -49,8 +50,8 @@ In order to run experiments, follow these steps:
     - **`bo-arena`**: build with `sbatch build_bo_arena_singularity.sbatch`. Note that this needs `--fakeroot`; on clusters without such access, build the image elsewhere and copy it in.
 
    The exact images used for running the experiments in the paper will be released upon publication.
-4. Run experiments with `submit.py`. Commands used to run the experiments can be found below. Each job starts its own `bencher` sidecar automatically — no need to start a separate `bencher` job first. Note that `submit.py` performs operations such as setting time and memory limits, and deciding whether to run on CPU or GPU depending on the algorithm/task being run, so you may wish to edit this depending on your specific cluster setup. The main code for actually running the experiments, which is executed via `submit.py`, can be found in `scripts/experiment_runner.py`. The core logic is very similar to the code snippet provided in our paper, with additional code added for performing tasks such as initialising a WandB run, setting up a logger, ensuring the working tree is clean for reproducibility, and saving results.
-5. Sync WandB results after experiments finish using `bash submit.sh sync_wandb.sbatch`. Experiments log to WandB in offline mode to avoid API rate limits with many concurrent jobs.
+3. Run experiments with `submit.py`. Commands used to run the experiments can be found below. Each job starts its own `bencher` sidecar automatically — no need to start a separate `bencher` job first. Note that `submit.py` performs operations such as setting time and memory limits, and deciding whether to run on CPU or GPU depending on the algorithm/task being run, so you may wish to edit this depending on your specific cluster setup. The main code for actually running the experiments, which is executed via `submit.py`, can be found in `scripts/experiment_runner.py`. The core logic is very similar to the code snippet provided in our paper, with additional code added for performing tasks such as (optionally) initialising a WandB run, setting up a logger, ensuring the working tree is clean for reproducibility, and saving results.
+4. (Optional, if using WandB) - Sync WandB results after experiments finish using `bash submit.sh sync_wandb.sbatch`. Experiments log to WandB in offline mode to avoid API rate limits with many concurrent jobs.
 
 Note that if you wish to run experiments without using the SLURM scripts, or building the Singularity image for `bo-arena`, you can do so by creating a virtual environment with the dependencies specified in `uv.lock` (which were used for running experiments in the paper), and running the code in `scripts/experiment_runner.py` directly, ensuring you have a `bencher` server running and accessible at `localhost:50051`. The correct arguments to provide to `experiment_runner.py` can be inferred from the "Experiment Commands" section below.
 

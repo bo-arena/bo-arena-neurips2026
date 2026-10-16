@@ -13,7 +13,7 @@ def seed_everything(seed: int) -> None:
         seed: The random seed to use for all generators.
     """
     random.seed(seed)
-    np.random.seed(seed)  # noqa: NPY002
+    np.random.seed(seed)  # ruff: ignore[numpy-legacy-random]
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
     torch.backends.cudnn.deterministic = True

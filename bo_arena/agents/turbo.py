@@ -103,8 +103,8 @@ class TuRBO(AskTellAgent):
         acqf_opt_strategy: str = "default",
         dtype: torch.dtype = torch.float64,
         device: torch.device | str = "cpu",
-        use_dsp: bool = False,  # noqa: FBT002
-        **kwargs: object,  # noqa: ARG002
+        use_dsp: bool = False,  # ruff: ignore[boolean-default-value-positional-argument]
+        **kwargs: object,  # ruff: ignore[unused-method-argument]
     ) -> None:
         """Initialize the TuRBO agent.
 
@@ -209,7 +209,7 @@ class TuRBO(AskTellAgent):
 
         return tr_lb, tr_ub
 
-    def tell_initial_data(self, data: Dataset, seed: int) -> None:  # noqa: ARG002
+    def tell_initial_data(self, data: Dataset, seed: int) -> None:  # ruff: ignore[unused-method-argument]
         """Provide initial observations to the agent and fit the SingleTaskGP model.
 
         Args:
@@ -383,7 +383,7 @@ class TuRBOLogEI(TuRBO):
         acqf_opt_strategy: str = "raasp",
         dtype: torch.dtype = torch.float64,
         device: torch.device | str = "cpu",
-        use_dsp: bool = False,  # noqa: FBT002
+        use_dsp: bool = False,  # ruff: ignore[boolean-default-value-positional-argument]
         n_candidates: int = 5000,
         n_restarts: int = 5,
         **kwargs: object,

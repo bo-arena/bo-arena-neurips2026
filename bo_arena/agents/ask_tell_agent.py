@@ -75,10 +75,10 @@ class AskTellAgent(ABC):
         """
         raise NotImplementedError
 
-    def generate_initial_points(  # noqa: PLR6301
+    def generate_initial_points(  # ruff: ignore[no-self-use]
         self,
-        n: int,  # noqa: ARG002
-        seed: int,  # noqa: ARG002
+        n: int,  # ruff: ignore[unused-method-argument]
+        seed: int,  # ruff: ignore[unused-method-argument]
     ) -> Float[np.ndarray, "N D"] | None:
         """Optionally generate custom initial points for evaluation.
 

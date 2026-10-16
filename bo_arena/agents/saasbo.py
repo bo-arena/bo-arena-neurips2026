@@ -21,7 +21,7 @@ def check_jax_sees_gpu() -> None:
     Raises:
         RuntimeError: If JAX is on the CPU.
     """
-    import jax  # noqa: PLC0415
+    import jax  # ruff: ignore[import-outside-top-level]
 
     if jax.default_backend() == "cpu":
         msg = (
@@ -54,7 +54,7 @@ class SAASBO(AskTellAgent):
         warmup_steps: int = 512,
         num_samples: int = 256,
         thinning: int = 16,
-        **kwargs: object,  # noqa: ARG002
+        **kwargs: object,  # ruff: ignore[unused-method-argument]
     ) -> None:
         """Initialize the SAASBO agent.
 
@@ -131,7 +131,7 @@ class SAASBO(AskTellAgent):
             seed=seed,
         )
         # Every fit is a new shape, so the cache is never used and keeps growing on CPU.
-        import jax  # noqa: PLC0415
+        import jax  # ruff: ignore[import-outside-top-level]
 
         jax.clear_caches()
         torch.cuda.empty_cache()
@@ -166,7 +166,7 @@ class SAASBO(AskTellAgent):
         self.train_y = torch.cat([self.train_y, new_y])
         self._fit_model(seed)
 
-    def ask(self, n: int, seed: int) -> Float[np.ndarray, "{n} D"]:  # noqa: ARG002
+    def ask(self, n: int, seed: int) -> Float[np.ndarray, "{n} D"]:  # ruff: ignore[unused-method-argument]
         """Select the next points to evaluate using Log Expected Improvement (qLogEI).
 
         This method optimizes the qLogEI acquisition function using MCMC samples from

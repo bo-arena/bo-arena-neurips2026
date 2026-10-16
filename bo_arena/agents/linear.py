@@ -84,7 +84,7 @@ class SphericalLinearKernel(Kernel):
     def __init__(
         self,
         ard_num_dims: int,
-        normalize_lengthscale: bool = False,  # noqa: FBT002
+        normalize_lengthscale: bool = False,  # ruff: ignore[boolean-default-value-positional-argument]
         **kwargs: object,
     ) -> None:
         """Initialize the SphericalLinearKernel.
@@ -115,7 +115,7 @@ class SphericalLinearKernel(Kernel):
             "lengthscale_prior",
             ls_prior,
             lambda m: m.lengthscale,
-            lambda m, v: m._set_lengthscale(v),  # noqa: SLF001
+            lambda m, v: m._set_lengthscale(v),  # ruff: ignore[private-member-access]
         )
         self.register_constraint("raw_lengthscale", ls_constraint)
 
@@ -165,8 +165,8 @@ class SphericalLinearKernel(Kernel):
         self,
         x1: Float[torch.Tensor, "... N D"],
         x2: Float[torch.Tensor, "... M D"],
-        diag: bool = False,  # noqa: FBT002
-        **params: object,  # noqa: ARG002
+        diag: bool = False,  # ruff: ignore[boolean-default-value-positional-argument]
+        **params: object,  # ruff: ignore[unused-method-argument]
     ) -> (
         RootLinearOperator
         | LowRankRootLinearOperator
@@ -248,8 +248,8 @@ class LinearBO(AskTellAgent):
         acqf_opt_strategy: str = "default",
         dtype: torch.dtype = torch.float64,
         device: torch.device | str = "cpu",
-        normalize_lengthscale: bool = False,  # noqa: FBT002
-        **kwargs: object,  # noqa: ARG002
+        normalize_lengthscale: bool = False,  # ruff: ignore[boolean-default-value-positional-argument]
+        **kwargs: object,  # ruff: ignore[unused-method-argument]
     ) -> None:
         """Initialize the LinearBO agent.
 
@@ -331,7 +331,7 @@ class LinearBO(AskTellAgent):
         ):
             fit_gpytorch_mll(mll)
 
-    def tell_initial_data(self, data: Dataset, seed: int) -> None:  # noqa: ARG002
+    def tell_initial_data(self, data: Dataset, seed: int) -> None:  # ruff: ignore[unused-method-argument]
         """Provide initial observations to the agent and fit the SingleTaskGP model.
 
         Args:
@@ -345,7 +345,7 @@ class LinearBO(AskTellAgent):
         ).unsqueeze(-1)
         self._fit_model()
 
-    def tell(self, data: Dataset, seed: int) -> None:  # noqa: ARG002
+    def tell(self, data: Dataset, seed: int) -> None:  # ruff: ignore[unused-method-argument]
         """Update the agent with new observations and refit the SingleTaskGP model.
 
         Args:
@@ -361,7 +361,7 @@ class LinearBO(AskTellAgent):
         self.train_y = torch.cat([self.train_y, new_y])
         self._fit_model()
 
-    def ask(self, n: int, seed: int) -> Float[np.ndarray, "{n} D"]:  # noqa: ARG002
+    def ask(self, n: int, seed: int) -> Float[np.ndarray, "{n} D"]:  # ruff: ignore[unused-method-argument]
         """Select the next points to evaluate using Log Expected Improvement (LogEI).
 
         This method optimizes the LogEI (or qLogEI for batch size > 1) acquisition

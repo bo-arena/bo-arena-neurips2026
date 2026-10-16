@@ -20,7 +20,7 @@ dependencies = [
 [project.optional-dependencies]
 test = ["beartype>=0.22.9,<0.23", "pytest>=9,<10"]
 dev = [
-    "ruff>=0.15.7,<0.16",
+    "ruff==0.16.8",
     "pre-commit>=4.5,<5",
     "jupytext>=1.19,<2",
     "ipykernel>=7.2,<8",
@@ -112,62 +112,62 @@ select = [
 ]
 ignore = [
     # Conflicting lint rules with Ruff's formatter
-    "W191",
-    "E111",
-    "E114",
-    "E117",
-    "D206",
-    "D300",
-    "Q000",
-    "Q001",
-    "Q002",
-    "Q003",
-    "COM812",
-    "COM819",
-    "ISC001",
-    "ISC002",
-    "FBT001",
-    "FBT003",
-    "TD003",
-    "TRY003",
+    "tab-indentation",
+    "indentation-with-invalid-multiple",
+    "indentation-with-invalid-multiple-comment",
+    "over-indented",
+    "docstring-tab-indentation",
+    "triple-single-quotes",
+    "bad-quotes-inline-string",
+    "bad-quotes-multiline-string",
+    "bad-quotes-docstring",
+    "avoidable-escaped-quote",
+    "missing-trailing-comma",
+    "prohibited-trailing-comma",
+    "single-line-implicit-string-concatenation",
+    "multi-line-implicit-string-concatenation",
+    "boolean-type-hint-positional-argument",
+    "boolean-positional-value-in-call",
+    "missing-todo-link",
+    "raise-vanilla-args",
     # It is fine to override loop variables when it is clear that only the value that
     # overrides the original is needed
-    "PLW2901",
+    "redefined-loop-name",
     # It is often impossible to enforce a hard limit on the number of arguments
-    "PLR0913",
-    "PLR0917",
+    "too-many-arguments",
+    "too-many-positional-arguments",
     # The performance of logging is not a concern for us; in return, using f-strings
     # makes the logged messages much more readable in code
-    "G004",
+    "logging-f-string",
     # We do not annotate __init__ methods -- args are specified in the class docstring
-    "D107",
+    "undocumented-public-init",
     # This is research code, attribute names are more flexible with casing
-    "E741",
-    "N802",
-    "N803",
-    "N806",
-    "N812",
-    "N815",
-    "N816",
+    "ambiguous-variable-name",
+    "invalid-function-name",
+    "invalid-argument-name",
+    "non-lowercase-variable-in-function",
+    "lowercase-imported-as-non-lowercase",
+    "mixed-case-variable-in-class-scope",
+    "mixed-case-variable-in-global-scope",
     # Magic values are fine for academic code as longs as they are not overused
-    "PLR2004",
-    "PLR0912",
-    "PLR0914",
+    "magic-value-comparison",
+    "too-many-branches",
+    "too-many-locals",
     # In-place assigments are not always possible in torch
-    "PLR6104",
+    "non-augmented-assignment",
     # Assignments before return can emphasize the code's semantic structure
-    "RET504",
-    "S403",
+    "unnecessary-assign",
+    "suspicious-pickle-import",
     # We don't do cryptography
-    "S311",
+    "suspicious-non-cryptographic-random-usage",
     # The subprocess module is fine as long as one validates the commands
-    "S404",
+    "suspicious-subprocess-import",
     # Jaxtyping is incompatible with the checking of annotation strings
-    "F722",
+    "forward-annotation-syntax-error",
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"test_*.py" = ["S101"] # Use of assert is allowed in test files
+"test_*.py" = ["assert"] # Use of assert is allowed in test files
 
 [tool.ruff.lint.mccabe]
 max-complexity = 18

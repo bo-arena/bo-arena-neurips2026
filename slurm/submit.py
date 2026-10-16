@@ -390,7 +390,7 @@ def main() -> None:
             print(f"    {' '.join(cmd)}\n")
         else:
             print(label)
-            result = subprocess.run(  # noqa: S603
+            result = subprocess.run(  # ruff: ignore[subprocess-without-shell-equals-true]
                 cmd, capture_output=True, text=True, check=False
             )
             if result.returncode == 0:

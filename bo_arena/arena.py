@@ -87,7 +87,7 @@ class Arena:
             np.empty(0, dtype=np.float32),
         )
 
-    def run(self) -> RunResult:  # noqa: PLR0915
+    def run(self) -> RunResult:  # ruff: ignore[too-many-statements]
         """Run the main BO loop.
 
         Runs the main Bayesian optimization loop, which consists of:

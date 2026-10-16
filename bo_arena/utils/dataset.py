@@ -26,11 +26,11 @@ class Dataset:
     def __post_init__(self) -> None:
         """Checks that the shapes of $X$ and $y$ are compatible."""
         if self.X.shape[0] != self.y.shape[0]:
-            msg = f"Inputs, X, and outputs, y, must have the same number of elements. Got X.shape={self.X.shape} and y.shape={self.y.shape}."  # noqa: E501
+            msg = f"Inputs, X, and outputs, y, must have the same number of elements. Got X.shape={self.X.shape} and y.shape={self.y.shape}."  # ruff: ignore[line-too-long]
             raise ValueError(msg)
 
         if self.y.ndim != 1:
-            msg = f"Outputs, y, must be a 1-dimensional array with shape (N,). Got y.shape={self.y.shape}."  # noqa: E501
+            msg = f"Outputs, y, must be a 1-dimensional array with shape (N,). Got y.shape={self.y.shape}."  # ruff: ignore[line-too-long]
             raise ValueError(msg)
 
     def __add__(self, other: Dataset) -> Dataset:

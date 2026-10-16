@@ -44,7 +44,7 @@ class BounceState:
     # allocated to the entire run
     new_bins_on_split: int = 2
     initial_target_dim: int = 2
-    eval_budget_until_input_dim: int = 250  # TODO: a sensible way of  # noqa: TD002
+    eval_budget_until_input_dim: int = 250  # TODO: a sensible way of  # ruff: ignore[missing-todo-author]
     # setting this (and some of the properties above) should be considered when we
     # release bo-arena.
 
@@ -447,11 +447,11 @@ class Bounce(AskTellAgent):
         input_dim: int,
         n_total_evaluations: int,
         acqf_opt_strategy: str = "default",
-        use_dsp: bool = False,  # noqa: FBT002
-        use_log_ei: bool = False,  # noqa: FBT002
+        use_dsp: bool = False,  # ruff: ignore[boolean-default-value-positional-argument]
+        use_log_ei: bool = False,  # ruff: ignore[boolean-default-value-positional-argument]
         dtype: torch.dtype = torch.float64,
         device: torch.device | str = "cpu",
-        **kwargs: Any,  # noqa: ANN401, ARG002
+        **kwargs: Any,  # ruff: ignore[any-type, unused-method-argument]
     ) -> None:
         """Initialize the Bounce agent.
 
@@ -640,7 +640,7 @@ class Bounce(AskTellAgent):
 
         return X_full_01.detach().cpu().numpy()
 
-    def tell_initial_data(self, data: Dataset, seed: int) -> None:  # noqa: ARG002
+    def tell_initial_data(self, data: Dataset, seed: int) -> None:  # ruff: ignore[unused-method-argument]
         """Provide initial observations to the agent and fit the SingleTaskGP model.
 
         Args:

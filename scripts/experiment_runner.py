@@ -110,11 +110,11 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def main() -> None:  # noqa: PLR0915
+def main() -> None:  # ruff: ignore[too-many-statements]
     """Run the benchmark."""
     # Ensure working tree is clean for reproducibility
     git_status = subprocess.run(
-        ["git", "status", "--porcelain"],  # noqa: S607
+        ["git", "status", "--porcelain"],  # ruff: ignore[start-process-with-partial-path]
         capture_output=True,
         text=True,
         check=True,
@@ -202,7 +202,7 @@ def main() -> None:  # noqa: PLR0915
 
     # Build per-seed config capturing experiment parameters and environment
     git_hash = subprocess.run(
-        ["git", "rev-parse", "HEAD"],  # noqa: S607
+        ["git", "rev-parse", "HEAD"],  # ruff: ignore[start-process-with-partial-path]
         capture_output=True,
         text=True,
         check=False,

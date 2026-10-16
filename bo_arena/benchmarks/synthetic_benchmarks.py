@@ -76,7 +76,7 @@ class Hartmann6D(Benchmark):
 
         super().__init__(name=name, metadata=metadata)
 
-    def evaluate_points(  # noqa: PLR6301
+    def evaluate_points(  # ruff: ignore[no-self-use]
         self, points: Float[np.ndarray, "N D"]
     ) -> Float[np.ndarray, " N"]:
         """Evaluate the Hartmann 6D function at the given points.

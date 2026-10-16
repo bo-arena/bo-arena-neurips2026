@@ -17,9 +17,9 @@ import wandb
 from bo_arena.agents import AGENTS
 from bo_arena.agents.bounce import Bounce
 from bo_arena.arena import Arena
-from bo_arena.benchmarks import BencherBenchmark
-from bo_arena.benchmarks.synthetic_benchmarks import Ackley, Michalewicz, StyblinskiTang
 from bo_arena.experiment_seeds import EXPERIMENT_SEEDS
+from bo_arena.problems import BencherProblem
+from bo_arena.problems.synthetic_problems import Ackley, Michalewicz, StyblinskiTang
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 RESULTS_DIR = ROOT_DIR / "results"
@@ -35,10 +35,10 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run Bayesian Optimization Benchmark")
 
     parser.add_argument(
-        "--benchmark",
+        "--problem",
         type=str,
         default="lasso-dna",
-        help="Name of the benchmark to run (e.g., 'svm')",
+        help="Name of the problem to run (e.g., 'svm')",
     )
     parser.add_argument(
         "--agent",
@@ -131,18 +131,18 @@ def main() -> None:  # ruff: ignore[too-many-statements]
     args = parse_args()
     seed = EXPERIMENT_SEEDS[args.seed_idx]
 
-    # Initialize Benchmark and Agent
-    if args.benchmark == "ackley_dim_100":
-        benchmark = Ackley(dim=100)
-    elif args.benchmark == "michalewicz_dim_100":
-        benchmark = Michalewicz(dim=100)
-    elif args.benchmark == "styblinski_tang_dim_100":
-        benchmark = StyblinskiTang(dim=100)
+    # Initialize Problem and Agent
+    if args.problem == "ackley_dim_100":
+        problem = Ackley(dim=100)
+    elif args.problem == "michalewicz_dim_100":
+        problem = Michalewicz(dim=100)
+    elif args.problem == "styblinski_tang_dim_100":
+        problem = StyblinskiTang(dim=100)
     else:
-        benchmark = BencherBenchmark(
-            name=args.benchmark, address=args.address, port=args.port
+        problem = BencherProblem(
+            name=args.problem, address=args.address, port=args.port
         )
-    metadata = benchmark.metadata
+    metadata = problem.metadata
     input_dim = metadata.input_dim
 
     # Resolve n_init and n_tot
@@ -171,8 +171,8 @@ def main() -> None:  # ruff: ignore[too-many-statements]
         raise ValueError(msg)
 
     # Build experiment directory and file paths
-    # Structure: results/{benchmark}/{agent}/acqf_opt_{strategy}/[batch_{N}/]
-    problem_name = args.benchmark
+    # Structure: results/{problem}/{agent}/acqf_opt_{strategy}/[batch_{N}/]
+    problem_name = args.problem
     agent_name = str(agent)
     acqf_opt_dir = f"acqf_opt_{args.acqf_opt_strategy}"
     experiment_dir = RESULTS_DIR / problem_name / agent_name / acqf_opt_dir
@@ -210,7 +210,7 @@ def main() -> None:  # ruff: ignore[too-many-statements]
     ).stdout.strip()
 
     config = {
-        "benchmark": problem_name,
+        "problem": problem_name,
         "agent": agent_name,
         "acqf_opt_strategy": args.acqf_opt_strategy,
         "n_initial_points": n_init,
@@ -264,7 +264,7 @@ def main() -> None:  # ruff: ignore[too-many-statements]
 
     # Run Arena
     bo_arena = Arena(
-        benchmark=benchmark,
+        problem=problem,
         agent=agent,
         seed=seed,
         n_initial_points=n_init,

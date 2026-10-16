@@ -8,7 +8,7 @@ from bo_arena.agents.random import Random
 from bo_arena.agents.registry import AGENTS
 from bo_arena.agents.saasbo import SAASBO
 from bo_arena.arena import Arena, RunResult
-from bo_arena.benchmarks.synthetic_benchmarks import Hartmann6D
+from bo_arena.problems.synthetic_problems import Hartmann6D
 from bo_arena.utils.miscellaneous import generate_seed
 
 SKIP_REASONS = {
@@ -28,15 +28,13 @@ AGENT_PARAMS = [
 @pytest.mark.parametrize("agent_name", AGENT_PARAMS)
 def test_seed_determinism(agent_name: str) -> None:
     """Running the Arena twice with the same seed should give identical results."""
-    benchmark = Hartmann6D(embed_dim=100)
+    problem = Hartmann6D(embed_dim=100)
     agent_cls = AGENTS[agent_name]
 
     def run_arena(seed: int) -> RunResult:
-        agent = agent_cls(
-            input_dim=benchmark.metadata.input_dim, n_total_evaluations=12
-        )
+        agent = agent_cls(input_dim=problem.metadata.input_dim, n_total_evaluations=12)
         arena = Arena(
-            benchmark=benchmark,
+            problem=problem,
             agent=agent,
             seed=seed,
             batch_size=1,
@@ -55,15 +53,13 @@ def test_seed_determinism(agent_name: str) -> None:
 @pytest.mark.parametrize("agent_name", AGENT_PARAMS)
 def test_different_seeds_give_different_results(agent_name: str) -> None:
     """Running the Arena with different seeds should give different results."""
-    benchmark = Hartmann6D(embed_dim=100)
+    problem = Hartmann6D(embed_dim=100)
     agent_cls = AGENTS[agent_name]
 
     def run_arena(seed: int) -> RunResult:
-        agent = agent_cls(
-            input_dim=benchmark.metadata.input_dim, n_total_evaluations=12
-        )
+        agent = agent_cls(input_dim=problem.metadata.input_dim, n_total_evaluations=12)
         arena = Arena(
-            benchmark=benchmark,
+            problem=problem,
             agent=agent,
             seed=seed,
             batch_size=1,
@@ -80,10 +76,10 @@ def test_different_seeds_give_different_results(agent_name: str) -> None:
 
 def test_observed_data_is_float32() -> None:
     """Arena.run() should return float32 arrays for both X and y."""
-    benchmark = Hartmann6D(embed_dim=100)
-    agent = Random(input_dim=benchmark.metadata.input_dim)
+    problem = Hartmann6D(embed_dim=100)
+    agent = Random(input_dim=problem.metadata.input_dim)
     arena = Arena(
-        benchmark=benchmark,
+        problem=problem,
         agent=agent,
         seed=42,
         batch_size=1,

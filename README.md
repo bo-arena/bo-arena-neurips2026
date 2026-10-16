@@ -61,7 +61,7 @@ Below are the commands used to run the experiments in the paper:
 1. Main results (Figure 3). For this plot, we ran algorithms using the default settings from their respective papers via the following command:
     ```
     python slurm/submit.py \
-    --benchmark rover,mopta08,lasso-dna,svm,mujoco-ant,mujoco-humanoid \
+    --problem rover,mopta08,lasso-dna,svm,mujoco-ant,mujoco-humanoid \
     --agent vanilla_bo,linear_bo,random,turbo \
     --acqf-opt-strategy default \
     --seed-range 0-19
@@ -69,7 +69,7 @@ Below are the commands used to run the experiments in the paper:
     The bounce results are obtained via the following command (as the number of initial points used in the paper is 5, due to a low-dimensional subspace being used at the start):
     ```
     python slurm/submit.py \
-    --benchmark rover,mopta08,lasso-dna,svm,mujoco-ant,mujoco-humanoid \
+    --problem rover,mopta08,lasso-dna,svm,mujoco-ant,mujoco-humanoid \
     --agent bounce \
     --acqf-opt-strategy default \
     --n-init 5 \
@@ -78,7 +78,7 @@ Below are the commands used to run the experiments in the paper:
     The SAASBO results are obtained via the following command, as we limited the total number of evaluations to 500 due to the expense of running the algorithm (and didn't run on mujoco-humanoid as it was too expensive to run with SAASBO):
     ```
     python slurm/submit.py \
-    --benchmark rover,mopta08,lasso-dna,svm,mujoco-ant\
+    --problem rover,mopta08,lasso-dna,svm,mujoco-ant\
     --agent saasbo \
     --acqf-opt-strategy default \
     --n-evals 500 \
@@ -88,7 +88,7 @@ Below are the commands used to run the experiments in the paper:
 2. Figure 1 (and Figure 8) results. The "Vanilla BO (Hvarfner et al., 2024)" and "Random" results were obtained using the command above. The "Vanilla BO (Yu et al., 2026)" results were obtained using the following command:
     ```
     python slurm/submit.py \
-    --benchmark rover,mopta08,lasso-dna,svm,mujoco-ant,mujoco-humanoid \
+    --problem rover,mopta08,lasso-dna,svm,mujoco-ant,mujoco-humanoid \
     --agent vanilla_bo_yu_2026 \
     --acqf-opt-strategy default \
     --seed-range 0-19
@@ -96,17 +96,17 @@ Below are the commands used to run the experiments in the paper:
     The "BoTorch v0.11.3 (2024)" results were obtained using the following command:
     ```
     python slurm/submit.py \
-    --benchmark rover,mopta08,lasso-dna,svm,mujoco-ant,mujoco-humanoid \
+    --problem rover,mopta08,lasso-dna,svm,mujoco-ant,mujoco-humanoid \
     --agent historic_bo \
     --acqf-opt-strategy default \
     --seed-range 0-19
     ```
     The "EI-BO (Cheon et al., 2025)" results were obtained using the package referenced in the original paper, modified to use `bencher` and the same initial points as used in the rest of the experiments.
 
-3. Synthetic benchmark results (Figure 4). These results were obtained with the following commands:
+3. Synthetic problem results (Figure 4). These results were obtained with the following commands:
     ```
     python slurm/submit.py \
-    --benchmark ackley_dim_100,michalewicz_dim_100,styblinski_tang_dim_100 \
+    --problem ackley_dim_100,michalewicz_dim_100,styblinski_tang_dim_100 \
     --agent vanilla_bo,linear_bo,random,turbo \
     --acqf-opt-strategy default \
     --seed-range 0-19
@@ -114,7 +114,7 @@ Below are the commands used to run the experiments in the paper:
     And the results for bounce were obtained with:
     ```
     python slurm/submit.py \
-    --benchmark ackley_dim_100,michalewicz_dim_100,styblinski_tang_dim_100 \
+    --problem ackley_dim_100,michalewicz_dim_100,styblinski_tang_dim_100 \
     --agent bounce \
     --acqf-opt-strategy default \
     --n-init 5 \
@@ -124,7 +124,7 @@ Below are the commands used to run the experiments in the paper:
 4. EULBO comparison (Figure 5). The Vanilla BO (window 100) and Vanilla BO (window 100 with incumbent) results were obtained with the following commands:
     ```
     python slurm/submit.py \
-    --benchmark mopta08,lasso-dna,svm \
+    --problem mopta08,lasso-dna,svm \
     --agent window_vanilla_bo,best_window_vanilla_bo \
     --acqf-opt-strategy default \
     --batch-size 20 \
@@ -138,7 +138,7 @@ Below are the commands used to run the experiments in the paper:
     TuRBO (RAASP):
     ```
     python slurm/submit.py \
-    --benchmark rover,mopta08,lasso-dna,svm,mujoco-ant,mujoco-humanoid \
+    --problem rover,mopta08,lasso-dna,svm,mujoco-ant,mujoco-humanoid \
     --agent turbo \
     --acqf-opt-strategy default \
     --seed-range 0-19
@@ -146,7 +146,7 @@ Below are the commands used to run the experiments in the paper:
     Vanilla BO (BoTorch RAASP):
     ```
     python slurm/submit.py \
-    --benchmark rover,mopta08,lasso-dna,svm,mujoco-ant,mujoco-humanoid \
+    --problem rover,mopta08,lasso-dna,svm,mujoco-ant,mujoco-humanoid \
     --agent vanilla_bo \
     --acqf-opt-strategy botorch_raasp \
     --seed-range 0-19
@@ -154,7 +154,7 @@ Below are the commands used to run the experiments in the paper:
     Vanilla BO and TuRBO (no RAASP):
     ```
     python slurm/submit.py \
-    --benchmark rover,mopta08,lasso-dna,svm,mujoco-ant,mujoco-humanoid \
+    --problem rover,mopta08,lasso-dna,svm,mujoco-ant,mujoco-humanoid \
     --agent vanilla_bo,turbo \
     --acqf-opt-strategy no_raasp \
     --seed-range 0-19
@@ -165,7 +165,7 @@ Below are the commands used to run the experiments in the paper:
     Vanilla BO:
     ```
     python slurm/submit.py \
-    --benchmark rover,mopta08,lasso-dna,svm,mujoco-ant,mujoco-humanoid \
+    --problem rover,mopta08,lasso-dna,svm,mujoco-ant,mujoco-humanoid \
     --agent vanilla_bo \
     --acqf-opt-strategy botorch_raasp \
     --seed-range 0-19
@@ -173,7 +173,7 @@ Below are the commands used to run the experiments in the paper:
     TuRBO:
     ```
     python slurm/submit.py \
-    --benchmark rover,mopta08,lasso-dna,svm,mujoco-ant,mujoco-humanoid \
+    --problem rover,mopta08,lasso-dna,svm,mujoco-ant,mujoco-humanoid \
     --agent turbo \
     --acqf-opt-strategy default \
     --seed-range 0-19
@@ -181,7 +181,7 @@ Below are the commands used to run the experiments in the paper:
     TuRBO (DSP):
     ```
     python slurm/submit.py \
-    --benchmark rover,mopta08,lasso-dna,svm,mujoco-ant,mujoco-humanoid \
+    --problem rover,mopta08,lasso-dna,svm,mujoco-ant,mujoco-humanoid \
     --agent turbo_dsp \
     --acqf-opt-strategy raasp \
     --seed-range 0-19
@@ -189,7 +189,7 @@ Below are the commands used to run the experiments in the paper:
     TuRBO (LogEI):
     ```
     python slurm/submit.py \
-    --benchmark rover,mopta08,lasso-dna,svm,mujoco-ant,mujoco-humanoid \
+    --problem rover,mopta08,lasso-dna,svm,mujoco-ant,mujoco-humanoid \
     --agent turbo_log_ei \
     --acqf-opt-strategy raasp \
     --seed-range 0-19
@@ -197,7 +197,7 @@ Below are the commands used to run the experiments in the paper:
     TuRBO (LogEI + DSP):
     ```
     python slurm/submit.py \
-    --benchmark rover,mopta08,lasso-dna,svm,mujoco-ant,mujoco-humanoid \
+    --problem rover,mopta08,lasso-dna,svm,mujoco-ant,mujoco-humanoid \
     --agent turbo_log_ei_dsp \
     --acqf-opt-strategy raasp \
     --seed-range 0-19

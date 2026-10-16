@@ -8,8 +8,8 @@ import numpy as np
 from wandb import Run
 
 from bo_arena.agents import AskTellAgent
-from bo_arena.benchmarks import Benchmark
-from bo_arena.benchmarks.input_space import ContinuousInputSpace
+from bo_arena.problems import Problem
+from bo_arena.problems.input_space import ContinuousInputSpace
 from bo_arena.utils.dataset import Dataset
 from bo_arena.utils.miscellaneous import (
     generate_seed,
@@ -25,7 +25,7 @@ class RunResult:
         observed_data: The dataset of all observed points.
         ask_times: Wall-clock time (seconds) for each agent.ask() call.
         tell_times: Wall-clock time (seconds) for each agent.tell() call.
-        eval_times: Wall-clock time (seconds) for each benchmark.evaluate_points() call.
+        eval_times: Wall-clock time (seconds) for each problem.evaluate_points() call.
     """
 
     observed_data: Dataset
@@ -37,25 +37,25 @@ class RunResult:
 class Arena:
     """Arena for running BO experiments.
 
-    Note that benchmarks are assumed to be maximization problems, following the same
+    Note that problems are assumed to be maximization problems, following the same
     convention as in BoTorch.
 
     Args:
-        benchmark: The benchmark to run.
+        problem: The problem to run.
         agent: The BO agent to use for optimization.
         seed: Random seed for reproducibility.
         batch_size: Number of points to evaluate in each BO iteration.
         n_initial_points: (Optional) number of initial points to sample - if None, uses
-            the benchmark's default.
+            the problem's default.
         n_total_evaluations: (Optional) number of total evaluations - if None, uses the
-            benchmark's default.
+            problem's default.
         logger: (Optional) logger for logging information.
         wandb_run: (Optional) WandB run to use for logging.
     """
 
     def __init__(
         self,
-        benchmark: Benchmark,
+        problem: Problem,
         agent: AskTellAgent,
         seed: int,
         batch_size: int,
@@ -64,18 +64,18 @@ class Arena:
         logger: Logger | None = None,
         wandb_run: Run | None = None,
     ) -> None:
-        self.benchmark = benchmark
+        self.problem = problem
         self.agent = agent
         self._key = np.random.SeedSequence(seed)
         self._has_run = False
 
         if n_initial_points is None:
-            self.n_initial_points = benchmark.metadata.default_n_initial_points
+            self.n_initial_points = problem.metadata.default_n_initial_points
         else:
             self.n_initial_points = n_initial_points
 
         if n_total_evaluations is None:
-            self.n_total_evaluations = benchmark.metadata.default_n_total_evaluations
+            self.n_total_evaluations = problem.metadata.default_n_total_evaluations
         else:
             self.n_total_evaluations = n_total_evaluations
 
@@ -83,7 +83,7 @@ class Arena:
         self.logger = logger
         self.wandb_run = wandb_run
         self.observed_data = Dataset(
-            np.empty((0, self.benchmark.metadata.input_dim), dtype=np.float32),
+            np.empty((0, self.problem.metadata.input_dim), dtype=np.float32),
             np.empty(0, dtype=np.float32),
         )
 
@@ -91,9 +91,9 @@ class Arena:
         """Run the main BO loop.
 
         Runs the main Bayesian optimization loop, which consists of:
-        1. Sampling initial points from the benchmark's input space and evaluating them.
+        1. Sampling initial points from the problem's input space and evaluating them.
         2. Iteratively asking the agent for new points to evaluate, evaluating them on
-           the benchmark, and providing the observations back to the agent.
+           the problem, and providing the observations back to the agent.
 
         If a logger is provided, logs information about each iteration, including
         the number of evaluations, times taken for each step, and the best observation
@@ -127,7 +127,7 @@ class Arena:
         init_key, loop_key = self._key.spawn(2)
         gen_init_key, tell_init_key = init_key.spawn(2)
 
-        # Sample initial points from the benchmark's input space and evaluate them.
+        # Sample initial points from the problem's input space and evaluate them.
         # Agents may override generate_initial_points to provide custom initialization.
         seed = generate_seed(gen_init_key)
         seed_everything(seed)
@@ -135,19 +135,19 @@ class Arena:
         if custom_points is not None:
             initial_points = custom_points
         else:
-            initial_points = self.benchmark.metadata.input_space.sample(
+            initial_points = self.problem.metadata.input_space.sample(
                 self.n_initial_points,
                 seed,
             )
         initial_points = initial_points.astype(np.float32)
-        input_space = self.benchmark.metadata.input_space
+        input_space = self.problem.metadata.input_space
         if isinstance(input_space, ContinuousInputSpace):
             initial_points = np.clip(
                 initial_points,
                 input_space.lower_bounds.astype(np.float32),
                 input_space.upper_bounds.astype(np.float32),
             )
-        initial_observations = self.benchmark.evaluate_points(initial_points).astype(
+        initial_observations = self.problem.evaluate_points(initial_points).astype(
             np.float32
         )
         self.observed_data = self.observed_data + Dataset(
@@ -210,9 +210,9 @@ class Arena:
                     input_space.upper_bounds.astype(np.float32),
                 )
 
-            # Evaluate the benchmark at the new points.
+            # Evaluate the problem at the new points.
             start = time.perf_counter()
-            new_observations = self.benchmark.evaluate_points(new_points).astype(
+            new_observations = self.problem.evaluate_points(new_points).astype(
                 np.float32
             )
             eval_time = time.perf_counter() - start

@@ -7,22 +7,22 @@
 # submission time, not hardcoded here.
 #
 # Required environment variables (set via submit.py --export):
-#   BENCHMARK          - benchmark name (e.g., "lasso-dna")
+#   PROBLEM            - problem name (e.g., "lasso-dna")
 #   AGENT              - agent name (e.g., "vanilla_bo")
 #   ACQF_OPT_STRATEGY  - acquisition function optimization strategy (e.g., "default")
 #   DEVICE             - "cpu" or "cuda"
 #
 # Optional environment variables:
-#   N_EVALS            - total number of evaluations (overrides benchmark default)
+#   N_EVALS            - total number of evaluations (overrides problem default)
 #   BATCH_SIZE         - batch size for candidate generation (default: 1)
-#   N_INIT             - number of initial points (overrides benchmark default)
+#   N_INIT             - number of initial points (overrides problem default)
 
 source "$(pwd)/slurm/preamble.sh"
 
 export OMP_NUM_THREADS=${SLURM_CPUS_PER_TASK}
 
-if [ -z "$BENCHMARK" ] || [ -z "$AGENT" ] || [ -z "$ACQF_OPT_STRATEGY" ] || [ -z "$DEVICE" ]; then
-    echo "Error: BENCHMARK, AGENT, ACQF_OPT_STRATEGY, and DEVICE must be set."
+if [ -z "$PROBLEM" ] || [ -z "$AGENT" ] || [ -z "$ACQF_OPT_STRATEGY" ] || [ -z "$DEVICE" ]; then
+    echo "Error: PROBLEM, AGENT, ACQF_OPT_STRATEGY, and DEVICE must be set."
     echo "Use submit.py to launch experiments."
     exit 1
 fi
@@ -35,8 +35,8 @@ if [ "$DEVICE" = "cuda" ]; then
     NV_FLAG="--nv"
 fi
 
-# Synthetic benchmarks are evaluated in-process and don't need the Bencher server.
-case "$BENCHMARK" in
+# Synthetic problems are evaluated in-process and don't need the Bencher server.
+case "$PROBLEM" in
     ackley_*|michalewicz_*|styblinski_tang_*)
         IS_SYNTHETIC=1
         ;;
@@ -136,13 +136,13 @@ if [ "$IS_SYNTHETIC" -eq 0 ]; then
     fi
     echo "Bencher server started"
 else
-    echo "Synthetic benchmark '$BENCHMARK' — skipping Bencher server startup"
+    echo "Synthetic problem '$PROBLEM' — skipping Bencher server startup"
     BENCHER_SOCKET_DIR="${TMPDIR:-/tmp}"   # nothing is bound; keeps the bind flag valid
     BENCHER_ADDRESS="127.0.0.1"            # unused, but the runner still takes an address
 fi
 
 # Run the experiment (SLURM_ARRAY_TASK_ID indexes into EXPERIMENT_SEEDS)
-echo "Running: benchmark=$BENCHMARK, agent=$AGENT, acqf_opt_strategy=$ACQF_OPT_STRATEGY, device=$DEVICE, seed_idx=$SLURM_ARRAY_TASK_ID"
+echo "Running: problem=$PROBLEM, agent=$AGENT, acqf_opt_strategy=$ACQF_OPT_STRATEGY, device=$DEVICE, seed_idx=$SLURM_ARRAY_TASK_ID"
 singularity exec \
     --bind "$REPO:/workspace/bo-arena" \
     --bind "$BENCHER_SOCKET_DIR" \
@@ -155,7 +155,7 @@ singularity exec \
     bash -c "
         cd /workspace/bo-arena
         /opt/venv/bin/python scripts/experiment_runner.py \
-            --benchmark $BENCHMARK \
+            --problem $PROBLEM \
             --agent $AGENT \
             --acqf-opt-strategy $ACQF_OPT_STRATEGY \
             --seed-idx $SLURM_ARRAY_TASK_ID \

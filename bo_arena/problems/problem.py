@@ -1,4 +1,4 @@
-"""Base class for benchmarks."""
+"""Base class for problems."""
 
 from abc import abstractmethod
 
@@ -7,33 +7,33 @@ from bencherscaffold.client import BencherClient
 from bencherscaffold.protoclasses.bencher_pb2 import Value
 from jaxtyping import Float
 
-from bo_arena.benchmarks.metadata import BENCHMARK_METADATA, BenchmarkMetadata
+from bo_arena.problems.metadata import PROBLEM_METADATA, ProblemMetadata
 
 
-class Benchmark:
-    """Base class for benchmarks.
+class Problem:
+    """Base class for problems.
 
-    Note that benchmarks should be written as maximization problems (following the same
+    Note that problems should be written as maximization problems (following the same
     convention as in BoTorch).
 
     Args:
-        name: Name of the benchmark.
-        metadata: Benchmark metadata.
+        name: Name of the problem.
+        metadata: Problem metadata.
     """
 
-    def __init__(self, name: str, metadata: BenchmarkMetadata) -> None:
+    def __init__(self, name: str, metadata: ProblemMetadata) -> None:
         self.name = name
         self.metadata = metadata
 
     def __str__(self) -> str:
-        """Return a string representation of the benchmark."""
+        """Return a string representation of the problem."""
         return self.name
 
     @abstractmethod
     def evaluate_points(
         self, points: Float[np.ndarray, "N D"]
     ) -> Float[np.ndarray, " N"]:
-        """Evaluate the benchmark at the given points.
+        """Evaluate the problem at the given points.
 
         Args:
             points: Points to evaluate.
@@ -45,12 +45,12 @@ class Benchmark:
         raise NotImplementedError(msg)
 
 
-class BencherBenchmark(Benchmark):
-    """Benchmark implementation using Bencher.
+class BencherProblem(Problem):
+    """Problem implementation using Bencher.
 
     Args:
-        name: Name of the benchmark.
-        metadata: Benchmark metadata. If None, will be looked up in BENCHMARK_METADATA
+        name: Name of the problem.
+        metadata: Problem metadata. If None, will be looked up in PROBLEM_METADATA
           using the name.
         address: Address of the Bencher server. Can be a hostname (e.g. "127.0.0.1")
           or a Unix socket path (e.g. "unix:///path/to/bencher.sock").
@@ -60,14 +60,14 @@ class BencherBenchmark(Benchmark):
     def __init__(
         self,
         name: str,
-        metadata: BenchmarkMetadata | None = None,
+        metadata: ProblemMetadata | None = None,
         address: str = "127.0.0.1",
         port: int = 50051,
     ) -> None:
         if metadata is None:
-            metadata = BENCHMARK_METADATA.get(name)
+            metadata = PROBLEM_METADATA.get(name)
             if metadata is None:
-                msg = f"Metadata not found for benchmark '{name}'."
+                msg = f"Metadata not found for problem '{name}'."
                 raise ValueError(msg)
         super().__init__(name, metadata)
         self.bencher_client = BencherClient(address=address, port=port)
@@ -75,7 +75,7 @@ class BencherBenchmark(Benchmark):
     def evaluate_points(
         self, points: Float[np.ndarray, "N D"]
     ) -> Float[np.ndarray, " N"]:
-        """Evaluate the benchmark at the given points.
+        """Evaluate the problem at the given points.
 
         Args:
             points: Points to evaluate.

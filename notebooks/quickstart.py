@@ -15,7 +15,7 @@
 # %%
 from bo_arena.agents import VanillaBO
 from bo_arena.arena import Arena
-from bo_arena.benchmarks import BencherBenchmark
+from bo_arena.problems import BencherProblem
 
 import logging
 
@@ -26,12 +26,12 @@ logger = logging.getLogger(__name__)
 
 # %%
 # Initialise problem and agent
-benchmark = BencherBenchmark(name="svm")
-agent = VanillaBO(input_dim=benchmark.metadata.input_dim)
+problem = BencherProblem(name="svm")
+agent = VanillaBO(input_dim=problem.metadata.input_dim)
 
 # Run the experiment
 bo_arena = Arena(
-    benchmark=benchmark,
+    problem=problem,
     agent=agent,
     seed=43,
     batch_size=1,

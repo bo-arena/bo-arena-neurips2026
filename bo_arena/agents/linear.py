@@ -149,7 +149,7 @@ class SphericalLinearKernel(Kernel):
 
         LinearPredictionStrategy (D-space Woodbury) is efficient when N > D.
         DefaultPredictionStrategy (N-space Cholesky) is efficient when D >= N,
-        which is the common case for high-dimensional benchmarks (e.g. mujoco-humanoid).
+        which is the common case for high-dimensional problems (e.g. mujoco-humanoid).
         """
         n = train_inputs[0].shape[-2]
         d = train_inputs[0].shape[-1] + 2  # +1 stereographic projection, +1 constant

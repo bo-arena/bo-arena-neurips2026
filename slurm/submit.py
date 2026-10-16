@@ -1,13 +1,13 @@
 """Submit experiment grid to SLURM.
 
-Computes the cross product of benchmarks, agents, and strategies, looks up
+Computes the cross product of problems, agents, and strategies, looks up
 the right SLURM resources for each combination, and submits one job array
 per combination (one array task per seed).
 
 Usage:
     # Preview what would be submitted:
     python slurm/submit.py \
-        --benchmark rover,svm \
+        --problem rover,svm \
         --agent vanilla_bo,saasbo \
         --acqf-opt-strategy default,raasp \
         --seed-range 0-9 \
@@ -15,7 +15,7 @@ Usage:
 
     # Actually submit:
     python slurm/submit.py \
-        --benchmark rover,svm \
+        --problem rover,svm \
         --agent vanilla_bo,saasbo \
         --acqf-opt-strategy default,raasp \
         --seed-range 0-9
@@ -53,28 +53,28 @@ RESOURCE_PROFILES = {
 }
 
 # ---------------------------------------------------------------------------
-# Minimum memory per benchmark. The final allocation is
-# max(agent profile mem, benchmark mem).
-# Benchmarks not listed here use 0 (i.e., agent profile decides).
+# Minimum memory per problem. The final allocation is
+# max(agent profile mem, problem mem).
+# Problems not listed here use 0 (i.e., agent profile decides).
 # ---------------------------------------------------------------------------
-BENCHMARK_MEM = {
+PROBLEM_MEM = {
     "mujoco-ant": "12G",
     "mujoco-humanoid": "16G",
 }
 
 # ---------------------------------------------------------------------------
-# Minimum time per benchmark. The final allocation is
-# max(agent profile time, benchmark time).
-# Benchmarks not listed here use "00:00:00" (i.e., agent profile decides).
+# Minimum time per problem. The final allocation is
+# max(agent profile time, problem time).
+# Problems not listed here use "00:00:00" (i.e., agent profile decides).
 # ---------------------------------------------------------------------------
-BENCHMARK_TIME = {
+PROBLEM_TIME = {
     "mujoco-ant": "72:00:00",
     "mujoco-humanoid": "72:00:00",
 }
 
 
 # ---------------------------------------------------------------------------
-# Per-(benchmark, agent) overrides. These are merged on top of the resolved
+# Per-(problem, agent) overrides. These are merged on top of the resolved
 # profile, so you can selectively override any field (device, gres, mem, …).
 # ---------------------------------------------------------------------------
 COMBO_OVERRIDES: dict[tuple[str, str], dict] = {
@@ -194,46 +194,46 @@ def parse_config_sh() -> dict[str, str]:
     return config
 
 
-def get_profile(agent: str, benchmark: str) -> dict:
+def get_profile(agent: str, problem: str) -> dict:
     """Return the resource profile for the given agent, with combo overrides."""
     profile = {**RESOURCE_PROFILES.get(agent, RESOURCE_PROFILES["default"])}
-    if (benchmark, agent) in COMBO_OVERRIDES:
-        profile.update(COMBO_OVERRIDES[benchmark, agent])
+    if (problem, agent) in COMBO_OVERRIDES:
+        profile.update(COMBO_OVERRIDES[problem, agent])
     return profile
 
 
-def resolve_mem(agent: str, benchmark: str) -> str:
-    """Return the memory allocation as max(agent profile, benchmark minimum).
+def resolve_mem(agent: str, problem: str) -> str:
+    """Return the memory allocation as max(agent profile, problem minimum).
 
     If "mem" is explicitly set in COMBO_OVERRIDES, that value is used
-    directly (benchmark floor is skipped).
+    directly (problem floor is skipped).
     """
-    profile = get_profile(agent, benchmark)
+    profile = get_profile(agent, problem)
     agent_mem = _parse_mem(profile["mem"])
-    override = COMBO_OVERRIDES.get((benchmark, agent), {})
+    override = COMBO_OVERRIDES.get((problem, agent), {})
     if "mem" in override:
         return _format_mem(agent_mem)
-    bench_mem = _parse_mem(BENCHMARK_MEM.get(benchmark, "0G"))
+    bench_mem = _parse_mem(PROBLEM_MEM.get(problem, "0G"))
     return _format_mem(max(agent_mem, bench_mem))
 
 
-def resolve_time(agent: str, benchmark: str) -> str:
-    """Return the time limit as max(agent profile, benchmark minimum).
+def resolve_time(agent: str, problem: str) -> str:
+    """Return the time limit as max(agent profile, problem minimum).
 
     If "time" is explicitly set in COMBO_OVERRIDES, that value is used
-    directly (benchmark floor is skipped).
+    directly (problem floor is skipped).
     """
-    profile = get_profile(agent, benchmark)
+    profile = get_profile(agent, problem)
     agent_time = _parse_time(profile["time"])
-    override = COMBO_OVERRIDES.get((benchmark, agent), {})
+    override = COMBO_OVERRIDES.get((problem, agent), {})
     if "time" in override:
         return _format_time(agent_time)
-    bench_time = _parse_time(BENCHMARK_TIME.get(benchmark, "00:00:00"))
+    bench_time = _parse_time(PROBLEM_TIME.get(problem, "00:00:00"))
     return _format_time(max(agent_time, bench_time))
 
 
 def build_sbatch_cmd(
-    benchmark: str,
+    problem: str,
     agent: str,
     acqf_opt_strategy: str,
     seed_range: str,
@@ -243,15 +243,15 @@ def build_sbatch_cmd(
     n_init: int | None = None,
 ) -> list[str]:
     """Build the sbatch command for a single experiment combination."""
-    profile = get_profile(agent, benchmark)
-    mem = resolve_mem(agent, benchmark)
-    time = resolve_time(agent, benchmark)
+    profile = get_profile(agent, problem)
+    mem = resolve_mem(agent, problem)
+    time = resolve_time(agent, problem)
     partition_key = "GPU_PARTITION" if profile["device"] == "cuda" else "CPU_PARTITION"
     partition = config[partition_key]
 
     export_parts = [
         "ALL",
-        f"BENCHMARK={benchmark}",
+        f"PROBLEM={problem}",
         f"AGENT={agent}",
         f"ACQF_OPT_STRATEGY={acqf_opt_strategy}",
         f"DEVICE={profile['device']}",
@@ -295,10 +295,10 @@ def main() -> None:
         epilog=__doc__,
     )
     parser.add_argument(
-        "--benchmark",
+        "--problem",
         type=str,
         required=True,
-        help="Comma-separated benchmark names (e.g., rover,svm,lasso-dna)",
+        help="Comma-separated problem names (e.g., rover,svm,lasso-dna)",
     )
     parser.add_argument(
         "--agent",
@@ -334,7 +334,7 @@ def main() -> None:
         "--n-init",
         type=int,
         default=None,
-        help="Number of initial points (overrides benchmark default)",
+        help="Number of initial points (overrides problem default)",
     )
     parser.add_argument(
         "--dry-run",
@@ -352,11 +352,11 @@ def main() -> None:
     config = parse_config_sh()
     Path(config["LOGS"]).mkdir(parents=True, exist_ok=True)
 
-    benchmarks = [s.strip() for s in args.benchmark.split(",")]
+    problems = [s.strip() for s in args.problem.split(",")]
     agents = [s.strip() for s in args.agent.split(",")]
     strategies = [s.strip() for s in args.acqf_opt_strategy.split(",")]
 
-    grid = list(itertools.product(benchmarks, agents, strategies))
+    grid = list(itertools.product(problems, agents, strategies))
 
     print(
         f"{'[DRY RUN] ' if args.dry_run else ''}Submitting {len(grid)} job array(s) "
@@ -366,9 +366,9 @@ def main() -> None:
     submitted = 0
     failed = 0
 
-    for benchmark, agent, strategy in grid:
+    for problem, agent, strategy in grid:
         cmd = build_sbatch_cmd(
-            benchmark,
+            problem,
             agent,
             strategy,
             args.seed_range,
@@ -377,12 +377,11 @@ def main() -> None:
             n_evals=args.n_evals,
             n_init=args.n_init,
         )
-        profile = get_profile(agent, benchmark)
-        mem = resolve_mem(agent, benchmark)
-        time = resolve_time(agent, benchmark)
+        profile = get_profile(agent, problem)
+        mem = resolve_mem(agent, problem)
+        time = resolve_time(agent, problem)
         label = (
-            f"  {benchmark} / {agent} / {strategy}"
-            f"  [{profile['device']}, {mem}, {time}]"
+            f"  {problem} / {agent} / {strategy}  [{profile['device']}, {mem}, {time}]"
         )
 
         if args.dry_run:

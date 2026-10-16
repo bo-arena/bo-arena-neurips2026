@@ -11,11 +11,11 @@ from matplotlib.ticker import EngFormatter, MaxNLocator
 from tueplots import figsizes, fonts, fontsizes
 from tueplots.constants.color import palettes
 
-from bo_arena.benchmarks.metadata import BENCHMARK_METADATA, SYNTHETIC_BENCHMARK_METADATA
+from bo_arena.problems.metadata import PROBLEM_METADATA, SYNTHETIC_PROBLEM_METADATA
 from bo_arena.experiment_seeds import EXPERIMENT_SEEDS
 from bo_arena.utils.data_processing import get_cum_max_y_stats
 
-BENCHMARK_METADATA = {**BENCHMARK_METADATA, **SYNTHETIC_BENCHMARK_METADATA}
+PROBLEM_METADATA = {**PROBLEM_METADATA, **SYNTHETIC_PROBLEM_METADATA}
 
 plt.rcParams.update({"figure.dpi": 200})
 
@@ -269,7 +269,7 @@ def _plot_cum_max_y_single(
     seeds = EXPERIMENT_SEEDS[:n_seeds]
     # Sort problems by input dimensionality (ascending) so the grid reads left-to-right,
     # low-to-high regardless of the order callers pass them in
-    problems = sorted(problems, key=lambda p: BENCHMARK_METADATA[p].input_dim)
+    problems = sorted(problems, key=lambda p: PROBLEM_METADATA[p].input_dim)
 
     # Compute grid shape (default: single row with one column per problem)
     n_problems = len(problems)
@@ -287,7 +287,7 @@ def _plot_cum_max_y_single(
         axes_flat = axes.flatten()
 
         for i, (ax, problem) in enumerate(zip(axes_flat, problems)):
-            n_init = BENCHMARK_METADATA[problem].default_n_initial_points
+            n_init = PROBLEM_METADATA[problem].default_n_initial_points
             # Track post-init y-bounds across lines to auto-zoom the y-axis later
             post_init_mins = []
             post_init_maxs = []

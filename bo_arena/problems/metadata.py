@@ -1,16 +1,16 @@
-"""Benchmarks metadata."""
+"""Problem metadata."""
 
 from dataclasses import dataclass
 
 import numpy as np
 from bencherscaffold.protoclasses.bencher_pb2 import ValueType
 
-from bo_arena.benchmarks.input_space import ContinuousInputSpace, InputSpace
+from bo_arena.problems.input_space import ContinuousInputSpace, InputSpace
 
 
 @dataclass(frozen=True)  # frozen=True makes them immutable
-class BenchmarkMetadata:
-    """Metadata that benchmarks must provide."""
+class ProblemMetadata:
+    """Metadata that problems must provide."""
 
     input_dim: int
     input_type: int  # protobuf ValueType enum (not a PEP-compliant type)
@@ -19,8 +19,8 @@ class BenchmarkMetadata:
     input_space: InputSpace
 
 
-BENCHMARK_METADATA: dict[str, BenchmarkMetadata] = {
-    "lunarlander": BenchmarkMetadata(
+PROBLEM_METADATA: dict[str, ProblemMetadata] = {
+    "lunarlander": ProblemMetadata(
         input_dim=12,
         input_type=ValueType.CONTINUOUS,
         default_n_initial_points=30,
@@ -30,7 +30,7 @@ BENCHMARK_METADATA: dict[str, BenchmarkMetadata] = {
             upper_bounds=np.ones(12),
         ),
     ),
-    "robotpushing": BenchmarkMetadata(
+    "robotpushing": ProblemMetadata(
         input_dim=14,
         input_type=ValueType.CONTINUOUS,
         default_n_initial_points=30,
@@ -40,7 +40,7 @@ BENCHMARK_METADATA: dict[str, BenchmarkMetadata] = {
             upper_bounds=np.ones(14),
         ),
     ),
-    "mujoco-swimmer": BenchmarkMetadata(
+    "mujoco-swimmer": ProblemMetadata(
         input_dim=16,
         input_type=ValueType.CONTINUOUS,
         default_n_initial_points=30,
@@ -50,7 +50,7 @@ BENCHMARK_METADATA: dict[str, BenchmarkMetadata] = {
             upper_bounds=np.ones(16),
         ),
     ),
-    "mujoco-hopper": BenchmarkMetadata(
+    "mujoco-hopper": ProblemMetadata(
         input_dim=33,
         input_type=ValueType.CONTINUOUS,
         default_n_initial_points=30,
@@ -60,7 +60,7 @@ BENCHMARK_METADATA: dict[str, BenchmarkMetadata] = {
             upper_bounds=np.ones(33),
         ),
     ),
-    "rover": BenchmarkMetadata(
+    "rover": ProblemMetadata(
         input_dim=60,
         input_type=ValueType.CONTINUOUS,
         default_n_initial_points=30,
@@ -70,7 +70,7 @@ BENCHMARK_METADATA: dict[str, BenchmarkMetadata] = {
             upper_bounds=np.ones(60),
         ),
     ),
-    "mujoco-walker": BenchmarkMetadata(
+    "mujoco-walker": ProblemMetadata(
         input_dim=102,
         input_type=ValueType.CONTINUOUS,
         default_n_initial_points=30,
@@ -80,7 +80,7 @@ BENCHMARK_METADATA: dict[str, BenchmarkMetadata] = {
             upper_bounds=np.ones(102),
         ),
     ),
-    "mujoco-halfcheetah": BenchmarkMetadata(
+    "mujoco-halfcheetah": ProblemMetadata(
         input_dim=102,
         input_type=ValueType.CONTINUOUS,
         default_n_initial_points=30,
@@ -90,7 +90,7 @@ BENCHMARK_METADATA: dict[str, BenchmarkMetadata] = {
             upper_bounds=np.ones(102),
         ),
     ),
-    "mopta08": BenchmarkMetadata(
+    "mopta08": ProblemMetadata(
         input_dim=124,
         input_type=ValueType.CONTINUOUS,
         default_n_initial_points=30,
@@ -100,7 +100,7 @@ BENCHMARK_METADATA: dict[str, BenchmarkMetadata] = {
             upper_bounds=np.ones(124),
         ),
     ),
-    "lasso-dna": BenchmarkMetadata(
+    "lasso-dna": ProblemMetadata(
         input_dim=180,
         input_type=ValueType.CONTINUOUS,
         default_n_initial_points=30,
@@ -110,7 +110,7 @@ BENCHMARK_METADATA: dict[str, BenchmarkMetadata] = {
             upper_bounds=np.ones(180),
         ),
     ),
-    "svm": BenchmarkMetadata(
+    "svm": ProblemMetadata(
         input_dim=388,
         input_type=ValueType.CONTINUOUS,
         default_n_initial_points=30,
@@ -120,7 +120,7 @@ BENCHMARK_METADATA: dict[str, BenchmarkMetadata] = {
             upper_bounds=np.ones(388),
         ),
     ),
-    "mujoco-ant": BenchmarkMetadata(
+    "mujoco-ant": ProblemMetadata(
         input_dim=888,
         input_type=ValueType.CONTINUOUS,
         default_n_initial_points=30,
@@ -130,7 +130,7 @@ BENCHMARK_METADATA: dict[str, BenchmarkMetadata] = {
             upper_bounds=np.ones(888),
         ),
     ),
-    "mujoco-humanoid": BenchmarkMetadata(
+    "mujoco-humanoid": ProblemMetadata(
         input_dim=6392,
         input_type=ValueType.CONTINUOUS,
         default_n_initial_points=30,
@@ -140,7 +140,7 @@ BENCHMARK_METADATA: dict[str, BenchmarkMetadata] = {
             upper_bounds=np.ones(6392),
         ),
     ),
-    "bbob-attractivesector": BenchmarkMetadata(
+    "bbob-attractivesector": ProblemMetadata(
         input_dim=100,
         input_type=ValueType.CONTINUOUS,
         default_n_initial_points=30,
@@ -150,7 +150,7 @@ BENCHMARK_METADATA: dict[str, BenchmarkMetadata] = {
             upper_bounds=np.ones(100),
         ),
     ),
-    "bbob-ellipsoidrotated": BenchmarkMetadata(
+    "bbob-ellipsoidrotated": ProblemMetadata(
         input_dim=100,
         input_type=ValueType.CONTINUOUS,
         default_n_initial_points=30,
@@ -160,7 +160,7 @@ BENCHMARK_METADATA: dict[str, BenchmarkMetadata] = {
             upper_bounds=np.ones(100),
         ),
     ),
-    "bbob-sharpridge": BenchmarkMetadata(
+    "bbob-sharpridge": ProblemMetadata(
         input_dim=100,
         input_type=ValueType.CONTINUOUS,
         default_n_initial_points=30,
@@ -170,7 +170,7 @@ BENCHMARK_METADATA: dict[str, BenchmarkMetadata] = {
             upper_bounds=np.ones(100),
         ),
     ),
-    "bbob-rastriginrotated": BenchmarkMetadata(
+    "bbob-rastriginrotated": ProblemMetadata(
         input_dim=100,
         input_type=ValueType.CONTINUOUS,
         default_n_initial_points=30,
@@ -180,7 +180,7 @@ BENCHMARK_METADATA: dict[str, BenchmarkMetadata] = {
             upper_bounds=np.ones(100),
         ),
     ),
-    "bbob-griewankrosenbrock": BenchmarkMetadata(
+    "bbob-griewankrosenbrock": ProblemMetadata(
         input_dim=100,
         input_type=ValueType.CONTINUOUS,
         default_n_initial_points=30,
@@ -190,7 +190,7 @@ BENCHMARK_METADATA: dict[str, BenchmarkMetadata] = {
             upper_bounds=np.ones(100),
         ),
     ),
-    "bbob-schwefel": BenchmarkMetadata(
+    "bbob-schwefel": ProblemMetadata(
         input_dim=100,
         input_type=ValueType.CONTINUOUS,
         default_n_initial_points=30,
@@ -203,8 +203,8 @@ BENCHMARK_METADATA: dict[str, BenchmarkMetadata] = {
 }
 
 
-SYNTHETIC_BENCHMARK_METADATA: dict[str, BenchmarkMetadata] = {
-    "hartmann6d_embed_dim_100": BenchmarkMetadata(
+SYNTHETIC_PROBLEM_METADATA: dict[str, ProblemMetadata] = {
+    "hartmann6d_embed_dim_100": ProblemMetadata(
         input_dim=100,
         input_type=ValueType.CONTINUOUS,
         default_n_initial_points=20,
@@ -214,7 +214,7 @@ SYNTHETIC_BENCHMARK_METADATA: dict[str, BenchmarkMetadata] = {
             upper_bounds=np.ones(100),
         ),
     ),
-    "hartmann6d_embed_dim_300": BenchmarkMetadata(
+    "hartmann6d_embed_dim_300": ProblemMetadata(
         input_dim=300,
         input_type=ValueType.CONTINUOUS,
         default_n_initial_points=20,
@@ -224,7 +224,7 @@ SYNTHETIC_BENCHMARK_METADATA: dict[str, BenchmarkMetadata] = {
             upper_bounds=np.ones(300),
         ),
     ),
-    "ackley_dim_100": BenchmarkMetadata(
+    "ackley_dim_100": ProblemMetadata(
         input_dim=100,
         input_type=ValueType.CONTINUOUS,
         default_n_initial_points=30,
@@ -234,7 +234,7 @@ SYNTHETIC_BENCHMARK_METADATA: dict[str, BenchmarkMetadata] = {
             upper_bounds=np.ones(100),
         ),
     ),
-    "michalewicz_dim_100": BenchmarkMetadata(
+    "michalewicz_dim_100": ProblemMetadata(
         input_dim=100,
         input_type=ValueType.CONTINUOUS,
         default_n_initial_points=30,
@@ -244,7 +244,7 @@ SYNTHETIC_BENCHMARK_METADATA: dict[str, BenchmarkMetadata] = {
             upper_bounds=np.ones(100),
         ),
     ),
-    "styblinski_tang_dim_100": BenchmarkMetadata(
+    "styblinski_tang_dim_100": ProblemMetadata(
         input_dim=100,
         input_type=ValueType.CONTINUOUS,
         default_n_initial_points=30,

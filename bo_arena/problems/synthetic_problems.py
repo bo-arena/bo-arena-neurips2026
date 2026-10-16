@@ -1,4 +1,4 @@
-"""Synthetic benchmarks."""
+"""Synthetic problems."""
 
 import numpy as np
 import torch
@@ -7,8 +7,8 @@ from botorch.test_functions.synthetic import Michalewicz as BotorchMichalewicz
 from botorch.test_functions.synthetic import StyblinskiTang as BotorchStyblinskiTang
 from jaxtyping import Float
 
-from bo_arena.benchmarks import Benchmark
-from bo_arena.benchmarks.metadata import SYNTHETIC_BENCHMARK_METADATA, BenchmarkMetadata
+from bo_arena.problems import Problem
+from bo_arena.problems.metadata import SYNTHETIC_PROBLEM_METADATA, ProblemMetadata
 
 # Standard Hartmann 6D constants: https://www.sfu.ca/~ssurjano/hart6.html
 _ALPHA = np.array([1.0, 1.2, 3.0, 3.2])
@@ -45,7 +45,7 @@ def _hartmann6d(x: Float[np.ndarray, "N 6"]) -> Float[np.ndarray, " N"]:
     return np.sum(_ALPHA * np.exp(-inner), axis=1)
 
 
-class Hartmann6D(Benchmark):
+class Hartmann6D(Problem):
     """Hartmann 6D function (optionally) embedded in a higher-dimensional space.
 
     The first 6 dimensions are active; the remaining dimensions are ignored.
@@ -57,11 +57,11 @@ class Hartmann6D(Benchmark):
 
     Raises:
         ValueError: If embed_dim is less than 6 or if metadata is not found for the
-        benchmark.
+        problem.
     """
 
     def __init__(
-        self, embed_dim: int = 6, metadata: BenchmarkMetadata | None = None
+        self, embed_dim: int = 6, metadata: ProblemMetadata | None = None
     ) -> None:
         if embed_dim < 6:
             msg = f"embed_dim must be >= 6, got {embed_dim}."
@@ -69,9 +69,9 @@ class Hartmann6D(Benchmark):
 
         name = f"hartmann6d_embed_dim_{embed_dim}"
         if metadata is None:
-            metadata = SYNTHETIC_BENCHMARK_METADATA.get(name)
+            metadata = SYNTHETIC_PROBLEM_METADATA.get(name)
             if metadata is None:
-                msg = f"Metadata not found for benchmark '{name}'."
+                msg = f"Metadata not found for problem '{name}'."
                 raise ValueError(msg)
 
         super().__init__(name=name, metadata=metadata)
@@ -90,7 +90,7 @@ class Hartmann6D(Benchmark):
         return _hartmann6d(points[:, :6])
 
 
-class Ackley(Benchmark):
+class Ackley(Problem):
     """Ackley function (negated for maximisation).
 
     Wraps BoTorch's :class:`botorch.test_functions.synthetic.Ackley`. Inputs are
@@ -103,15 +103,15 @@ class Ackley(Benchmark):
         dim: Input dimensionality.
 
     Raises:
-        ValueError: If metadata is not found for the benchmark.
+        ValueError: If metadata is not found for the problem.
     """
 
-    def __init__(self, dim: int, metadata: BenchmarkMetadata | None = None) -> None:
+    def __init__(self, dim: int, metadata: ProblemMetadata | None = None) -> None:
         name = f"ackley_dim_{dim}"
         if metadata is None:
-            metadata = SYNTHETIC_BENCHMARK_METADATA.get(name)
+            metadata = SYNTHETIC_PROBLEM_METADATA.get(name)
             if metadata is None:
-                msg = f"Metadata not found for benchmark '{name}'."
+                msg = f"Metadata not found for problem '{name}'."
                 raise ValueError(msg)
 
         super().__init__(name=name, metadata=metadata)
@@ -136,7 +136,7 @@ class Ackley(Benchmark):
         return self._botorch_ackley(x).cpu().numpy()
 
 
-class Michalewicz(Benchmark):
+class Michalewicz(Problem):
     """Michalewicz function (negated for maximisation).
 
     Wraps BoTorch's :class:`botorch.test_functions.synthetic.Michalewicz`. Inputs
@@ -148,15 +148,15 @@ class Michalewicz(Benchmark):
         dim: Input dimensionality.
 
     Raises:
-        ValueError: If metadata is not found for the benchmark.
+        ValueError: If metadata is not found for the problem.
     """
 
-    def __init__(self, dim: int, metadata: BenchmarkMetadata | None = None) -> None:
+    def __init__(self, dim: int, metadata: ProblemMetadata | None = None) -> None:
         name = f"michalewicz_dim_{dim}"
         if metadata is None:
-            metadata = SYNTHETIC_BENCHMARK_METADATA.get(name)
+            metadata = SYNTHETIC_PROBLEM_METADATA.get(name)
             if metadata is None:
-                msg = f"Metadata not found for benchmark '{name}'."
+                msg = f"Metadata not found for problem '{name}'."
                 raise ValueError(msg)
 
         super().__init__(name=name, metadata=metadata)
@@ -181,7 +181,7 @@ class Michalewicz(Benchmark):
         return self._botorch_michalewicz(x).cpu().numpy()
 
 
-class StyblinskiTang(Benchmark):
+class StyblinskiTang(Problem):
     """Styblinski-Tang function (negated for maximisation).
 
     Wraps BoTorch's :class:`botorch.test_functions.synthetic.StyblinskiTang`.
@@ -193,15 +193,15 @@ class StyblinskiTang(Benchmark):
         dim: Input dimensionality.
 
     Raises:
-        ValueError: If metadata is not found for the benchmark.
+        ValueError: If metadata is not found for the problem.
     """
 
-    def __init__(self, dim: int, metadata: BenchmarkMetadata | None = None) -> None:
+    def __init__(self, dim: int, metadata: ProblemMetadata | None = None) -> None:
         name = f"styblinski_tang_dim_{dim}"
         if metadata is None:
-            metadata = SYNTHETIC_BENCHMARK_METADATA.get(name)
+            metadata = SYNTHETIC_PROBLEM_METADATA.get(name)
             if metadata is None:
-                msg = f"Metadata not found for benchmark '{name}'."
+                msg = f"Metadata not found for problem '{name}'."
                 raise ValueError(msg)
 
         super().__init__(name=name, metadata=metadata)

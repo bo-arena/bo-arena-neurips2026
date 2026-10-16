@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from logging import Logger
 
 import numpy as np
-from jaxtyping import Float
+from jaxtyping import Float, UInt32
 from wandb import Run
 
 from bo_arena.agents import AskTellAgent
@@ -88,11 +88,14 @@ class Arena:
             np.empty((0, 1), dtype=np.float64),
         )
 
-    def _evaluate(self, points: Float[np.ndarray, "N D"]) -> Dataset:
+    def _evaluate(
+        self, points: Float[np.ndarray, "N D"], seeds: UInt32[np.ndarray, " N"]
+    ) -> Dataset:
         """Evaluate points on the problem, returning float64 data.
 
         Args:
             points: Points to evaluate.
+            seeds: Seeds, one per point, passed to the problem for evaluation.
 
         Returns:
             Dataset containing the evaluated points and their objective values.
@@ -101,7 +104,7 @@ class Arena:
             ValueError: If the problem returns more than one objective, as
                 multi-objective problems are not yet supported.
         """
-        data = self.problem.evaluate_points(points)
+        data = self.problem.evaluate_points(points, seeds)
         if data.n_objectives != 1:
             msg = (
                 f"Problem '{self.problem}' returned {data.n_objectives} objectives, "
@@ -126,9 +129,10 @@ class Arena:
         so far. If a WandB run is provided, logs detailed metrics for each evaluation.
 
         Seed derivation uses a tree structure rather than a chain. The master key is
-        split into an init branch and a loop branch. Since ``SeedSequence.spawn(n+1)[:n]
-        `` produces the same children as ``spawn(n)``, a new method can be added by
-        increasing the spawn count without changing any previously derived seeds.
+        split into an init branch, a loop branch and an evaluation branch. Since
+        ``SeedSequence.spawn(n+1)[:n]`` produces the same children as ``spawn(n)``, a
+        new method can be added by increasing the spawn count without changing any
+        previously derived seeds.
 
         Returns:
             A RunResult containing the observed data and per-iteration timing info.
@@ -150,13 +154,18 @@ class Arena:
         # Init-phase keys are spawned upfront so that each method gets a fixed
         # spawn index. Adding a new method means increasing the spawn count —
         # spawn(n+1)[:n] produces the same children as spawn(n).
-        init_key, loop_key = self._key.spawn(2)
-        gen_init_key, tell_init_key = init_key.spawn(2)
+        # Evaluation seeds are indexed by evaluation number rather than by iteration:
+        # the seed for evaluation i is eval_key.generate_state(n)[i] for any n > i, so
+        # it doesn't depend on the batch size or evaluation budget.
+        init_key, loop_key, eval_key = self._key.spawn(3)
+        gen_init_key, tell_init_key, global_gen_init_key, global_tell_init_key = (
+            init_key.spawn(4)
+        )
 
         # Sample initial points from the problem's input space and evaluate them.
         # Agents may override generate_initial_points to provide custom initialization.
+        seed_everything(generate_seed(global_gen_init_key))
         seed = generate_seed(gen_init_key)
-        seed_everything(seed)
         custom_points = self.agent.generate_initial_points(self.n_initial_points, seed)
         if custom_points is not None:
             initial_points = custom_points
@@ -173,11 +182,12 @@ class Arena:
                 input_space.lower_bounds,
                 input_space.upper_bounds,
             )
-        initial_data = self._evaluate(initial_points)
+        eval_seeds = eval_key.generate_state(initial_points.shape[0])
+        initial_data = self._evaluate(initial_points, eval_seeds)
         self.observed_data = self.observed_data + initial_data
         initial_observations = initial_data.objectives[:, 0]
+        seed_everything(generate_seed(global_tell_init_key))
         seed = generate_seed(tell_init_key)
-        seed_everything(seed)
         self.agent.tell_initial_data(self.observed_data, seed)
 
         # Log initial points info.
@@ -216,11 +226,11 @@ class Arena:
             # spawned upfront so new per-iteration methods can be added by
             # increasing the spawn count.
             iter_key = loop_key.spawn(1)[0]
-            ask_key, tell_key = iter_key.spawn(2)
+            ask_key, tell_key, global_ask_key, global_tell_key = iter_key.spawn(4)
 
             # Ask the agent for new points to evaluate.
+            seed_everything(generate_seed(global_ask_key))
             seed = generate_seed(ask_key)
-            seed_everything(seed)
             start = time.perf_counter()
             new_points = self.agent.ask(n_ask, seed)
             ask_time = time.perf_counter() - start
@@ -233,9 +243,14 @@ class Arena:
                     input_space.upper_bounds,
                 )
 
-            # Evaluate the problem at the new points.
+            # Evaluate the problem at the new points, using the seeds at the new
+            # points' evaluation indices.
+            eval_idx = self.observed_data.n
+            eval_seeds = eval_key.generate_state(eval_idx + new_points.shape[0])[
+                eval_idx:
+            ]
             start = time.perf_counter()
-            new_points_dataset = self._evaluate(new_points)
+            new_points_dataset = self._evaluate(new_points, eval_seeds)
             eval_time = time.perf_counter() - start
             eval_times.append(eval_time)
 
@@ -243,8 +258,8 @@ class Arena:
             self.observed_data = self.observed_data + new_points_dataset
 
             # Provide the new observations to the agent.
+            seed_everything(generate_seed(global_tell_key))
             seed = generate_seed(tell_key)
-            seed_everything(seed)
             start = time.perf_counter()
             self.agent.tell(new_points_dataset, seed)
             tell_time = time.perf_counter() - start

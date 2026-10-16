@@ -5,7 +5,7 @@ import torch
 from botorch.test_functions.synthetic import Ackley as BotorchAckley
 from botorch.test_functions.synthetic import Michalewicz as BotorchMichalewicz
 from botorch.test_functions.synthetic import StyblinskiTang as BotorchStyblinskiTang
-from jaxtyping import Float
+from jaxtyping import Float, UInt32
 
 from bo_arena.problems import Problem
 from bo_arena.problems.metadata import SYNTHETIC_PROBLEM_METADATA, ProblemMetadata
@@ -78,12 +78,15 @@ class Hartmann6D(Problem):
         super().__init__(name=name, metadata=metadata)
 
     def evaluate_points(  # ruff: ignore[no-self-use]
-        self, points: Float[np.ndarray, "N D"]
+        self,
+        points: Float[np.ndarray, "N D"],
+        seeds: UInt32[np.ndarray, " N"] | None = None,  # ruff: ignore[unused-method-argument]
     ) -> Dataset:
         """Evaluate the Hartmann 6D function at the given points.
 
         Args:
             points: Points to evaluate.
+            seeds: Unused, as the problem is deterministic.
 
         Returns:
             Dataset containing the evaluated points and their function values.
@@ -120,11 +123,16 @@ class Ackley(Problem):
         self._lower = self._botorch_ackley.bounds[0].numpy()
         self._upper = self._botorch_ackley.bounds[1].numpy()
 
-    def evaluate_points(self, points: Float[np.ndarray, "N D"]) -> Dataset:
+    def evaluate_points(
+        self,
+        points: Float[np.ndarray, "N D"],
+        seeds: UInt32[np.ndarray, " N"] | None = None,  # ruff: ignore[unused-method-argument]
+    ) -> Dataset:
         """Evaluate the Ackley function at the given points.
 
         Args:
             points: Points in [0, 1]^D to evaluate.
+            seeds: Unused, as the problem is deterministic.
 
         Returns:
             Dataset containing the evaluated points and their function values.
@@ -165,11 +173,16 @@ class Michalewicz(Problem):
         self._lower = self._botorch_michalewicz.bounds[0].numpy()
         self._upper = self._botorch_michalewicz.bounds[1].numpy()
 
-    def evaluate_points(self, points: Float[np.ndarray, "N D"]) -> Dataset:
+    def evaluate_points(
+        self,
+        points: Float[np.ndarray, "N D"],
+        seeds: UInt32[np.ndarray, " N"] | None = None,  # ruff: ignore[unused-method-argument]
+    ) -> Dataset:
         """Evaluate the Michalewicz function at the given points.
 
         Args:
             points: Points in [0, 1]^D to evaluate.
+            seeds: Unused, as the problem is deterministic.
 
         Returns:
             Dataset containing the evaluated points and their function values.
@@ -210,11 +223,16 @@ class StyblinskiTang(Problem):
         self._lower = self._botorch_styblinski_tang.bounds[0].numpy()
         self._upper = self._botorch_styblinski_tang.bounds[1].numpy()
 
-    def evaluate_points(self, points: Float[np.ndarray, "N D"]) -> Dataset:
+    def evaluate_points(
+        self,
+        points: Float[np.ndarray, "N D"],
+        seeds: UInt32[np.ndarray, " N"] | None = None,  # ruff: ignore[unused-method-argument]
+    ) -> Dataset:
         """Evaluate the Styblinski-Tang function at the given points.
 
         Args:
             points: Points in [0, 1]^D to evaluate.
+            seeds: Unused, as the problem is deterministic.
 
         Returns:
             Dataset containing the evaluated points and their function values.

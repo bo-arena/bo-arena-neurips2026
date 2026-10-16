@@ -5,7 +5,7 @@ from abc import abstractmethod
 import numpy as np
 from bencherscaffold.client import BencherClient
 from bencherscaffold.protoclasses.bencher_pb2 import Value
-from jaxtyping import Float
+from jaxtyping import Float, UInt32
 
 from bo_arena.problems.metadata import PROBLEM_METADATA, ProblemMetadata
 from bo_arena.utils.dataset import Dataset
@@ -31,11 +31,16 @@ class Problem:
         return self.name
 
     @abstractmethod
-    def evaluate_points(self, points: Float[np.ndarray, "N D"]) -> Dataset:
+    def evaluate_points(
+        self,
+        points: Float[np.ndarray, "N D"],
+        seeds: UInt32[np.ndarray, " N"] | None = None,
+    ) -> Dataset:
         """Evaluate the problem at the given points.
 
         Args:
             points: Points to evaluate.
+            seeds: (Optional) seeds, one per point, for seeding stochastic problems.
 
         Returns:
             Dataset containing the evaluated points and their objective values.
@@ -71,7 +76,11 @@ class BencherProblem(Problem):
         super().__init__(name, metadata)
         self.bencher_client = BencherClient(address=address, port=port)
 
-    def evaluate_points(self, points: Float[np.ndarray, "N D"]) -> Dataset:
+    def evaluate_points(
+        self,
+        points: Float[np.ndarray, "N D"],
+        seeds: UInt32[np.ndarray, " N"] | None = None,
+    ) -> Dataset:
         """Evaluate the problem at the given points.
 
         Bencher problems are minimization problems, so the objective values are
@@ -79,18 +88,20 @@ class BencherProblem(Problem):
 
         Args:
             points: Points to evaluate.
+            seeds: (Optional) seeds, one per point, for seeding stochastic problems.
 
         Returns:
             Dataset containing the evaluated points and their objective values.
         """
         objectives = []
-        for point in points:
+        for i, point in enumerate(points):
             bencher_point = [
                 Value(type=self.metadata.input_type, value=float(d)) for d in point
             ]
             result = self.bencher_client.evaluate_point(
                 benchmark_name=self.name,
                 point=bencher_point,
+                random_seed=int(seeds[i]) if seeds is not None else None,
             )
             # Turn minimization into maximization for BoTorch.
             objectives.append([-objective.value for objective in result.objectives])

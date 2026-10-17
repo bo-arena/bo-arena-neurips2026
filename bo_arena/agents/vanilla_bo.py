@@ -151,8 +151,7 @@ class VanillaBO(AskTellAgent):
             msg = "Model has not been initialized. Call tell_initial_data first."
             raise RuntimeError(msg)
 
-        # Hvarfner et al. use the MC-based qLogNEI for all batch sizes, including
-        # for q=1.
+        # Hvarfner et al. use the MC-based qLogNEI
         acq_func = qLogNoisyExpectedImprovement(
             model=self.model,
             X_baseline=self.train_X,

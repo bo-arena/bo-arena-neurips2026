@@ -8,7 +8,7 @@ import gpytorch
 import numpy as np
 import torch
 from botorch import gen_candidates_scipy
-from botorch.acquisition import LogExpectedImprovement
+from botorch.acquisition import qLogNoisyExpectedImprovement
 from botorch.fit import fit_gpytorch_mll
 from botorch.generation import MaxPosteriorSampling
 from botorch.models import SingleTaskGP
@@ -362,12 +362,12 @@ class TuRBO(AskTellAgent):
 
 
 class TuRBOLogEI(TuRBO):
-    """Trust Region Bayesian Optimization (TuRBO-1) agent with log EI acq fn.
+    """Trust Region Bayesian Optimization (TuRBO-1) agent with qlogNEI acq fn.
 
     This agent is a variant of TuRBO-1 as described in "Scalable Global Optimization via
     Local Bayesian Optimization" by Eriksson et al. (2019). TuRBO maintains a trust
     region around the best point found so far and adaptively expands or contracts it
-    based on success/failure. Unlike the original paper, this variant uses the log EI
+    based on success/failure. Unlike the original paper, this variant uses the qlogNEI
     acquisition function instead of Thompson sampling for candidate selection,
     facilitating the use of a gradient-based optimiser for maximising the acquisition
     function.
@@ -429,9 +429,9 @@ class TuRBOLogEI(TuRBO):
         return "turbo_log_ei_dsp" if self.use_dsp else "turbo_log_ei"
 
     def ask(self, n: int, seed: int) -> Float[np.ndarray, "{n} D"]:
-        """Select the next points to evaluate using TuRBO with log EI.
+        """Select the next points to evaluate using TuRBO with qLogNEI.
 
-        This method uses log EI with gradient-based optimisation to generate
+        This method uses qLogNEI with gradient-based optimisation to generate
         candidates within a trust region centered around the best point found so far.
 
         Args:
@@ -445,10 +445,7 @@ class TuRBOLogEI(TuRBO):
 
         Raises:
             NotImplementedError: If n > 1, since this implementation currently only
-              supports a batch size of 1 (note that theoretically the method could be
-              extended to larger batch sizes by using qLogExpectedImprovement and
-              modifying the acquisition function optimization accordingly, but this is
-              left for future work).
+              supports a batch size of 1.
             RuntimeError: If the TuRBO state has not been initialized with
                 `tell_initial_data`.
         """
@@ -476,15 +473,14 @@ class TuRBOLogEI(TuRBO):
 
         # Find the best point (center of trust region)
         best_idx = self.train_y.argmax()
-        best_f = self.train_y.max()
         x_center = self.train_X[best_idx].clone()
 
         # Get trust region bounds (in [0,1]^d space)
         tr_lb, tr_ub = self._get_trust_region_bounds(x_center, self.state.length)
 
-        acq_func = LogExpectedImprovement(
+        acq_func = qLogNoisyExpectedImprovement(
             model=self.model,
-            best_f=best_f,
+            X_baseline=self.train_X,
         )
 
         if self.acqf_opt_strategy == "raasp":

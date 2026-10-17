@@ -2,7 +2,7 @@
 
 import numpy as np
 import torch
-from botorch.acquisition.logei import qLogExpectedImprovement
+from botorch.acquisition.logei import qLogNoisyExpectedImprovement
 from botorch.fit import fit_fully_bayesian_model_nuts
 from botorch.generation import gen_candidates_scipy
 from botorch.models.fully_bayesian import SaasFullyBayesianSingleTaskGP
@@ -167,9 +167,9 @@ class SAASBO(AskTellAgent):
         self._fit_model(seed)
 
     def ask(self, n: int, seed: int) -> Float[np.ndarray, "{n} D"]:  # ruff: ignore[unused-method-argument]
-        """Select the next points to evaluate using Log Expected Improvement (qLogEI).
+        """Select the next points to evaluate using qLogNoisyExpectedImprovement.
 
-        This method optimizes the qLogEI acquisition function using MCMC samples from
+        This method optimizes the qLogNEI acquisition function using MCMC samples from
         the SAAS model.
 
         Args:
@@ -188,12 +188,10 @@ class SAASBO(AskTellAgent):
             msg = "Model has not been initialized. Call tell_initial_data first."
             raise RuntimeError(msg)
 
-        best_f = self.train_y.max()
-
-        # Use qLogEI for both single and batch cases since SAAS model uses MCMC samples
-        acq_func = qLogExpectedImprovement(
+        # Use qLogNEI for consistency with Vanilla BO and Ax
+        acq_func = qLogNoisyExpectedImprovement(
             model=self.model,
-            best_f=best_f,
+            X_baseline=self.train_X,
         )
         candidates, _ = optimize_acqf(
             acq_func,

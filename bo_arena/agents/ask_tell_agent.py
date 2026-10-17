@@ -22,6 +22,10 @@ class AskTellAgent(ABC):
     These methods are used in the Bayesian optimization loop to iteratively
     select points to evaluate and update the agent's internal model with new
     observations.
+
+    Agents operate in the unit hypercube [0, 1]^D: all points passed to and returned
+    by the agent are in [0, 1]^D, and the Arena handles mapping to and from the
+    problem's input space.
     """
 
     @abstractmethod
@@ -43,8 +47,8 @@ class AskTellAgent(ABC):
                 seed for any stochastic operations to ensure deterministic behavior.
 
         Returns:
-            Points selected by the agent for evaluation, with shape (M, D) where
-            1 <= M <= n.
+            Points in the unit hypercube [0,1]^D selected by the agent for evaluation,
+            with shape (M, D) where 1 <= M <= n.
         """
         raise NotImplementedError
 
@@ -54,7 +58,8 @@ class AskTellAgent(ABC):
 
         Args:
             data: Observations corresponding to the points requested
-                in the previous `ask` call.
+                in the previous `ask` call, with inputs scaled to the unit hypercube
+                [0,1]^D.
             seed: Random seed for reproducibility. Implementations should use this
                 seed for any stochastic operations to ensure deterministic behavior.
         """
@@ -69,7 +74,8 @@ class AskTellAgent(ABC):
         start of the optimization process.
 
         Args:
-            data: Initial observations to provide to the agent.
+            data: Initial observations to provide to the agent, with inputs scaled to
+                the unit hypercube [0,1]^D.
             seed: Random seed for reproducibility. Implementations should use this
                 seed for any stochastic operations to ensure deterministic behavior.
         """

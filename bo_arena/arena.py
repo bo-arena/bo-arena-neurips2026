@@ -41,6 +41,11 @@ class Arena:
     Note that problems are assumed to be maximization problems, following the same
     convention as in BoTorch.
 
+    Agents operate in the unit hypercube [0, 1]^D: the Arena maps points returned by
+    the agent into the problem's input space, and maps observed points back to the
+    unit hypercube before passing them to the agent. Observed data is stored in the
+    problem's input space.
+
     Args:
         problem: The problem to run.
         agent: The BO agent to use for optimization.
@@ -52,6 +57,9 @@ class Arena:
             problem's default.
         logger: (Optional) logger for logging information.
         wandb_run: (Optional) WandB run to use for logging.
+
+    Raises:
+        TypeError: If the problem's input space is not a `ContinuousInputSpace`.
     """
 
     def __init__(
@@ -80,6 +88,13 @@ class Arena:
         else:
             self.n_total_evaluations = n_total_evaluations
 
+        self.input_space = problem.metadata.input_space
+        if not isinstance(self.input_space, ContinuousInputSpace):
+            msg = (
+                "Only continuous input spaces are currently supported, got "
+                f"{type(self.input_space).__name__}."
+            )
+            raise TypeError(msg)
         self.batch_size = batch_size
         self.logger = logger
         self.wandb_run = wandb_run
@@ -115,6 +130,39 @@ class Arena:
             X=data.X.astype(np.float64),
             objectives=data.objectives.astype(np.float64),
         )
+
+    def _to_unit(self, data: Dataset) -> Dataset:
+        """Map a dataset's inputs to the unit hypercube for passing to the agent.
+
+        Args:
+            data: Dataset with inputs in the problem's input space.
+
+        Returns:
+            Dataset with inputs in [0, 1]^D.
+        """
+        return Dataset(X=self.input_space.to_unit(data.X), objectives=data.objectives)
+
+    def _from_unit(self, points: Float[np.ndarray, "N D"]) -> Float[np.ndarray, "N D"]:
+        """Map points returned by the agent from the unit hypercube to the input space.
+
+        Args:
+            points: Points returned by the agent.
+
+        Returns:
+            Points in the problem's input space, as float64.
+
+        Raises:
+            ValueError: If any point lies outside [0, 1]^D (or is NaN).
+        """
+        points = points.astype(np.float64)
+        if not np.all((points >= 0.0) & (points <= 1.0)):
+            msg = (
+                f"Agent '{self.agent}' returned points outside the unit hypercube "
+                f"(min={np.nanmin(points)}, max={np.nanmax(points)}, "
+                f"any NaN={bool(np.isnan(points).any())})."
+            )
+            raise ValueError(msg)
+        return self.input_space.from_unit(points)
 
     def run(self) -> RunResult:  # ruff: ignore[too-many-statements]
         """Run the main BO loop.
@@ -168,27 +216,16 @@ class Arena:
         seed = generate_seed(gen_init_key)
         custom_points = self.agent.generate_initial_points(self.n_initial_points, seed)
         if custom_points is not None:
-            initial_points = custom_points
+            initial_points = self._from_unit(custom_points)
         else:
-            initial_points = self.problem.metadata.input_space.sample(
-                self.n_initial_points,
-                seed,
-            )
-        initial_points = initial_points.astype(np.float64)
-        input_space = self.problem.metadata.input_space
-        if isinstance(input_space, ContinuousInputSpace):
-            initial_points = np.clip(
-                initial_points,
-                input_space.lower_bounds,
-                input_space.upper_bounds,
-            )
+            initial_points = self.input_space.sample(self.n_initial_points, seed)
         eval_seeds = eval_key.generate_state(initial_points.shape[0])
         initial_data = self._evaluate(initial_points, eval_seeds)
         self.observed_data = self.observed_data + initial_data
         initial_observations = initial_data.objectives[:, 0]
         seed_everything(generate_seed(global_tell_init_key))
         seed = generate_seed(tell_init_key)
-        self.agent.tell_initial_data(self.observed_data, seed)
+        self.agent.tell_initial_data(self._to_unit(self.observed_data), seed)
 
         # Log initial points info.
         if self.logger is not None:
@@ -235,13 +272,7 @@ class Arena:
             new_points = self.agent.ask(n_ask, seed)
             ask_time = time.perf_counter() - start
             ask_times.append(ask_time)
-            new_points = new_points.astype(np.float64)
-            if isinstance(input_space, ContinuousInputSpace):
-                new_points = np.clip(
-                    new_points,
-                    input_space.lower_bounds,
-                    input_space.upper_bounds,
-                )
+            new_points = self._from_unit(new_points)
 
             # Evaluate the problem at the new points, using the seeds at the new
             # points' evaluation indices.
@@ -261,7 +292,7 @@ class Arena:
             seed_everything(generate_seed(global_tell_key))
             seed = generate_seed(tell_key)
             start = time.perf_counter()
-            self.agent.tell(new_points_dataset, seed)
+            self.agent.tell(self._to_unit(new_points_dataset), seed)
             tell_time = time.perf_counter() - start
             tell_times.append(tell_time)
 

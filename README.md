@@ -1,9 +1,8 @@
 # bo-arena
-Arena for simple, reliable, and efficient benchmarking of Bayesian optimisation algorithms. This repository contains the code used to run the experiments in the paper: `BO-Arena: An Evolving Benchmark for High-Dimensional Bayesian Optimisation`. For commands used to run the experiments for the paper, see the "Experiment Commands" section below. Note that this repository contains additional code for running ablations in the paper. As such, a separate repository will be released upon publication of the paper, containing only the state-of-the-art algorithm implementations used to generate results for our leaderboard. Contributions from the community should take place in this separate repository, whose sole purpose is to act as an evolving collection of state-of-the-art high-dimensional Bayesian optimisation algorithms.
 
-### Contributing
+> ⚠️ **Note** - This repository was used for running a subset of the experiments in the paper `BO-Arena: An Evolving Benchmark for High-Dimensional Bayesian Optimisation`, and will not be actively maintained going forwards. The official, actively maintained `bo-arena` repository can be found [here](https://github.com/bo-arena/bo-arena).
 
-Please refer to the [contributing guidelines](CONTRIBUTING.md) for details on how to contribute to this project.
+This repository contains the code used to run several of the experiments in the paper: `BO-Arena: An Evolving Benchmark for High-Dimensional Bayesian Optimisation`,  published in the Evaluations & Datasets track at NeurIPS 2026 (citation below). For commands used to run the experiments for the paper, see the "Experiment Commands" section below. Note that this repository contains additional code for running ablations in the paper. The official [bo-arena repository](https://github.com/bo-arena/bo-arena) contains only the state-of-the-art algorithm implementations used to generate results for our leaderboard. Contributions should take place in that repository, whose sole purpose is to act as an evolving collection of state-of-the-art high-dimensional Bayesian optimisation algorithms.
 
 ### Quickstart
 
@@ -36,7 +35,7 @@ We use Unix sockets rather than fixed TCP ports to prevent different SLURM jobs 
 
 > **⚠️ Warning**
 >
-> Important - The run_experiment.sbatch script creates socket files for communicating with bencher under the directory $TMPDIR/bencher-$SLURM_JOB_ID (falling back to /tmp/bencher-$SLURM_JOB_ID if $TMPDIR is not set). The script generally removes this directory (and the created sockets) once it has finished running, but some cases (e.g. SIGKILL) it will not. Ideally $TMPDIR should be a job-specific temporary directory, so it will get deleted once the job finishes running in any case (on many clusters this is the case). If not, be careful, as $TMPDIR could get cluttered with directories containing socket files.
+> Important - The run_experiment.sbatch script creates socket files for communicating with bencher under the directory $TMPDIR/bencher-$SLURM_JOB_ID (falling back to /tmp/bencher-$SLURM_JOB_ID if $TMPDIR is not set). The script generally removes this directory (and the created sockets) once it has finished running, but in some cases (e.g. SIGKILL) it will not. Ideally $TMPDIR should be a job-specific temporary directory, so it will get deleted once the job finishes running in any case (on many clusters this is the case). If not, be careful, as $TMPDIR could get cluttered with directories containing socket files.
 
 In order to run experiments, follow these steps:
 1. Copy `slurm/config.sh.example` to `slurm/config.sh` and fill in your
@@ -54,72 +53,19 @@ Note that if you wish to run experiments without using the SLURM scripts, or bui
 
 ### Experiment Commands
 
-Below are the commands used to run the experiments in the paper:
+Below are the commands used to run the experiments in the paper. The results used for Figures 3 and 4 were generated using [the official bo-arena repository](https://github.com/bo-arena/bo-arena), with details provided in the README of that repository.
 
-1. Main results (Figure 3). For this plot, we ran algorithms using the default settings from their respective papers via the following command:
+1. Figure 1 (and Figure 8) results were obtained with the following command:
     ```
     python slurm/submit.py \
     --problem rover,mopta08,lasso-dna,svm,mujoco-ant,mujoco-humanoid \
-    --agent vanilla_bo,linear_bo,random,turbo \
-    --acqf-opt-strategy default \
-    --seed-range 0-19
-    ```
-    The bounce results are obtained via the following command (as the number of initial points used in the paper is 5, due to a low-dimensional subspace being used at the start):
-    ```
-    python slurm/submit.py \
-    --problem rover,mopta08,lasso-dna,svm,mujoco-ant,mujoco-humanoid \
-    --agent bounce \
-    --acqf-opt-strategy default \
-    --n-init 5 \
-    --seed-range 0-19
-    ```
-    The SAASBO results are obtained via the following command, as we limited the total number of evaluations to 500 due to the expense of running the algorithm (and didn't run on mujoco-humanoid as it was too expensive to run with SAASBO):
-    ```
-    python slurm/submit.py \
-    --problem rover,mopta08,lasso-dna,svm,mujoco-ant\
-    --agent saasbo \
-    --acqf-opt-strategy default \
-    --n-evals 500 \
-    --seed-range 0-19
-    ```
-
-2. Figure 1 (and Figure 8) results. The "Vanilla BO (Hvarfner et al., 2024)" and "Random" results were obtained using the command above. The "Vanilla BO (Yu et al., 2026)" results were obtained using the following command:
-    ```
-    python slurm/submit.py \
-    --problem rover,mopta08,lasso-dna,svm,mujoco-ant,mujoco-humanoid \
-    --agent vanilla_bo_yu_2026 \
-    --acqf-opt-strategy default \
-    --seed-range 0-19
-    ```
-    The "BoTorch v0.11.3 (2024)" results were obtained using the following command:
-    ```
-    python slurm/submit.py \
-    --problem rover,mopta08,lasso-dna,svm,mujoco-ant,mujoco-humanoid \
-    --agent historic_bo \
+    --agent vanilla_bo,random,vanilla_bo_yu_2026,historic_bo \
     --acqf-opt-strategy default \
     --seed-range 0-19
     ```
     The "EI-BO (Cheon et al., 2025)" results were obtained using the package referenced in the original paper, modified to use `bencher` and the same initial points as used in the rest of the experiments.
 
-3. Synthetic problem results (Figure 4). These results were obtained with the following commands:
-    ```
-    python slurm/submit.py \
-    --problem ackley_dim_100,michalewicz_dim_100,styblinski_tang_dim_100 \
-    --agent vanilla_bo,linear_bo,random,turbo \
-    --acqf-opt-strategy default \
-    --seed-range 0-19
-    ```
-    And the results for bounce were obtained with:
-    ```
-    python slurm/submit.py \
-    --problem ackley_dim_100,michalewicz_dim_100,styblinski_tang_dim_100 \
-    --agent bounce \
-    --acqf-opt-strategy default \
-    --n-init 5 \
-    --seed-range 0-19
-    ```
-
-4. EULBO comparison (Figure 5). The Vanilla BO (window 100) and Vanilla BO (window 100 with incumbent) results were obtained with the following commands:
+2. EULBO comparison (Figure 5). The Vanilla BO (window 100) and Vanilla BO (window 100 with incumbent) results were obtained with the following commands:
     ```
     python slurm/submit.py \
     --problem mopta08,lasso-dna,svm \
@@ -131,14 +77,14 @@ Below are the commands used to run the experiments in the paper:
     ```
     The EULBO results were obtained using the public repository of the original paper, modified to use `bencher` and the same initial points as used in the rest of the experiments.
 
-5. RAASP ablation (Figures 6 and 9). These results were obtained with the following commands.
+3. RAASP ablation (Figures 6 and 9). These results were obtained with the following commands.
 
     TuRBO (RAASP):
     ```
     python slurm/submit.py \
     --problem rover,mopta08,lasso-dna,svm,mujoco-ant,mujoco-humanoid \
     --agent turbo \
-    --acqf-opt-strategy default \
+    --acqf-opt-strategy raasp \
     --seed-range 0-19
     ```
     Vanilla BO (BoTorch RAASP):
@@ -158,7 +104,7 @@ Below are the commands used to run the experiments in the paper:
     --seed-range 0-19
     ```
 
-6. Trust-regions ablation (Figures 7 and 10). These results were obtained with the following commands.
+4. Trust-regions ablation (Figures 7 and 10). These results were obtained with the following commands.
 
     Vanilla BO:
     ```
@@ -173,7 +119,7 @@ Below are the commands used to run the experiments in the paper:
     python slurm/submit.py \
     --problem rover,mopta08,lasso-dna,svm,mujoco-ant,mujoco-humanoid \
     --agent turbo \
-    --acqf-opt-strategy default \
+    --acqf-opt-strategy raasp \
     --seed-range 0-19
     ```
     TuRBO (DSP):

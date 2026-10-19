@@ -26,7 +26,7 @@ def check_jax_sees_gpu() -> None:
     if jax.default_backend() == "cpu":
         msg = (
             "SAASBO was submitted with device='cuda', but JAX is running on the CPU. "
-            "jax[cuda12] is a dependency on Linux, so either the environment is "
+            "jax[cuda13] is a dependency on Linux, so either the environment is "
             "stale (re-run uv sync) or the plugin failed to initialise here."
         )
         raise RuntimeError(msg)

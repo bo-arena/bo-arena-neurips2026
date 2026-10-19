@@ -8,7 +8,10 @@ This repository contains the code used to run several of the experiments in the 
 
 In order to run a quick experiment with `bo-arena`, using similar code to the snippet presented in the appendix of our paper, follow these steps:
 
-1. Install dependencies using `uv` (see the "Install Dependencies" section of the [contributing guidelines](CONTRIBUTING.md) for details).
+1. Install dependencies using `uv`:
+    ```
+    uv sync --locked --all-groups
+    ```
 2. Start up the `bencher` server. You will need to first pull the docker image with:
 
     ```
@@ -21,7 +24,7 @@ In order to run a quick experiment with `bo-arena`, using similar code to the sn
     docker run --platform linux/amd64 -p 50051:50051 --restart always -d tchristie/bencher@sha256:a7ca83f6d0b3810ed8dc03bb210aa35c46e65d5d19e4371aa7dbf038be3b6467
     ```
     Note that this image was built from the `bencher` repository at commit `ba9ada07a7f3eaa5efd691200ed4866ff4ca6e1b`. If you want to create your own image, please refer to the instructions in [the bencher README](https://github.com/lpapenme/bencher).
-3. Run the `quickstart` notebook in the `notebooks/` directory, which demonstrates how to run a simple experiment with `bo-arena` using the `bencher` server you just started. For instructions for converting between `.py` and `.ipynb` formats, see the "Notebooks" section of the [contributing guidelines](CONTRIBUTING.md).
+3. Run the `quickstart` notebook in the `notebooks/` directory, which demonstrates how to run a simple experiment with `bo-arena` using the `bencher` server you just started. In order to convert from `.py` to `.ipynb` you can run `uv run jupytext --to ipynb <notebook>.py`.
 
 ### Running Experiments with bencher on a SLURM Cluster
 The `slurm` directory contains SLURM batch scripts for building Singularity containers and running `bencher` and `bo-arena` experiments on a SLURM cluster. These scripts may require modifications to paths, resource specifications, and other parameters to fit your specific cluster setup.

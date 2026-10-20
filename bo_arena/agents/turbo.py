@@ -8,7 +8,7 @@ import gpytorch
 import numpy as np
 import torch
 from botorch import gen_candidates_scipy
-from botorch.acquisition import LogExpectedImprovement
+from botorch.acquisition import qLogNoisyExpectedImprovement
 from botorch.fit import fit_gpytorch_mll
 from botorch.generation import MaxPosteriorSampling
 from botorch.models import SingleTaskGP
@@ -103,8 +103,8 @@ class TuRBO(AskTellAgent):
         acqf_opt_strategy: str = "default",
         dtype: torch.dtype = torch.float64,
         device: torch.device | str = "cpu",
-        use_dsp: bool = False,  # noqa: FBT002
-        **kwargs: object,  # noqa: ARG002
+        use_dsp: bool = False,  # ruff: ignore[boolean-default-value-positional-argument]
+        **kwargs: object,  # ruff: ignore[unused-method-argument]
     ) -> None:
         """Initialize the TuRBO agent.
 
@@ -209,7 +209,7 @@ class TuRBO(AskTellAgent):
 
         return tr_lb, tr_ub
 
-    def tell_initial_data(self, data: Dataset, seed: int) -> None:  # noqa: ARG002
+    def tell_initial_data(self, data: Dataset, seed: int) -> None:  # ruff: ignore[unused-method-argument]
         """Provide initial observations to the agent and fit the SingleTaskGP model.
 
         Args:
@@ -219,8 +219,8 @@ class TuRBO(AskTellAgent):
         """
         self.train_X = torch.tensor(data.X, dtype=self.dtype, device=self.device)
         self.train_y = torch.tensor(
-            data.y, dtype=self.dtype, device=self.device
-        ).unsqueeze(-1)
+            data.objectives, dtype=self.dtype, device=self.device
+        )
 
         self.n_init = self.train_X.shape[0]  # Used for TuRBO restarts
 
@@ -250,7 +250,7 @@ class TuRBO(AskTellAgent):
             raise RuntimeError(msg)
 
         new_X = torch.tensor(data.X, dtype=self.dtype, device=self.device)
-        new_y = torch.tensor(data.y, dtype=self.dtype, device=self.device).unsqueeze(-1)
+        new_y = torch.tensor(data.objectives, dtype=self.dtype, device=self.device)
 
         # Don't update the trust region if new_y is still from init buffer
         if self.model:
@@ -328,53 +328,26 @@ class TuRBO(AskTellAgent):
         # Get trust region bounds (in [0,1]^d space)
         tr_lb, tr_ub = self._get_trust_region_bounds(x_center, self.state.length)
 
-        # Use Sobol to generate perturbations
         if self.acqf_opt_strategy == "default":
             n_candidates = min(100 * self.input_dim, 5000)
         elif self.acqf_opt_strategy in {"no_raasp", "raasp"}:
             # For "no_raasp" and "raasp" we fix the number of candidates
             n_candidates = 5000
-        sobol = SobolEngine(self.input_dim, scramble=True, seed=seed)
-        sobol_samples = sobol.draw(n_candidates).to(
-            dtype=self.dtype, device=self.device
+
+        if self.acqf_opt_strategy in {"raasp", "default"}:
+            cand_sampling_method = "raasp"
+        elif self.acqf_opt_strategy == "no_raasp":
+            cand_sampling_method = "sobol"
+        X_cand = get_candidates(
+            n_candidates=n_candidates,
+            lb=tr_lb,
+            ub=tr_ub,
+            best_x=x_center,
+            seed=seed,
+            method=cand_sampling_method,
+            dtype=self.dtype,
+            device=self.device,
         )
-        sobol_samples = tr_lb + (tr_ub - tr_lb) * sobol_samples
-
-        if self.acqf_opt_strategy in {"default", "raasp"}:
-            # Candidates are formed by perturbing (a subset of dimensions of) the
-            # center point within the trust region.
-            prob_perturb = min(20.0 / self.input_dim, 1.0)
-            generator = torch.Generator(device=self.device).manual_seed(seed)
-            mask = (
-                torch.rand(
-                    n_candidates,
-                    self.input_dim,
-                    dtype=self.dtype,
-                    device=self.device,
-                    generator=generator,
-                )
-                <= prob_perturb
-            )
-            # Ensure at least one dimension is perturbed for each candidate
-            ind = torch.where(mask.sum(dim=1) == 0)[0]
-            if len(ind) > 0:
-                mask[
-                    ind,
-                    torch.randint(
-                        0,
-                        self.input_dim,
-                        size=(len(ind),),
-                        device=self.device,
-                        generator=generator,
-                    ),
-                ] = 1
-
-            # Create candidate points from the center with perturbations
-            X_cand = x_center.expand(n_candidates, self.input_dim).clone()
-            X_cand[mask] = sobol_samples[mask]
-        else:
-            # For "no_raasp", candidates are sampled uniformly within the trust region
-            X_cand = sobol_samples
 
         # Sample on the candidate points using Thompson Sampling
         with gpytorch.settings.max_cholesky_size(float("inf")):  # Always use Cholesky
@@ -389,12 +362,12 @@ class TuRBO(AskTellAgent):
 
 
 class TuRBOLogEI(TuRBO):
-    """Trust Region Bayesian Optimization (TuRBO-1) agent with log EI acq fn.
+    """Trust Region Bayesian Optimization (TuRBO-1) agent with qlogNEI acq fn.
 
     This agent is a variant of TuRBO-1 as described in "Scalable Global Optimization via
     Local Bayesian Optimization" by Eriksson et al. (2019). TuRBO maintains a trust
     region around the best point found so far and adaptively expands or contracts it
-    based on success/failure. Unlike the original paper, this variant uses the log EI
+    based on success/failure. Unlike the original paper, this variant uses the qlogNEI
     acquisition function instead of Thompson sampling for candidate selection,
     facilitating the use of a gradient-based optimiser for maximising the acquisition
     function.
@@ -410,7 +383,7 @@ class TuRBOLogEI(TuRBO):
         acqf_opt_strategy: str = "raasp",
         dtype: torch.dtype = torch.float64,
         device: torch.device | str = "cpu",
-        use_dsp: bool = False,  # noqa: FBT002
+        use_dsp: bool = False,  # ruff: ignore[boolean-default-value-positional-argument]
         n_candidates: int = 5000,
         n_restarts: int = 5,
         **kwargs: object,
@@ -456,9 +429,9 @@ class TuRBOLogEI(TuRBO):
         return "turbo_log_ei_dsp" if self.use_dsp else "turbo_log_ei"
 
     def ask(self, n: int, seed: int) -> Float[np.ndarray, "{n} D"]:
-        """Select the next points to evaluate using TuRBO with log EI.
+        """Select the next points to evaluate using TuRBO with qLogNEI.
 
-        This method uses log EI with gradient-based optimisation to generate
+        This method uses qLogNEI with gradient-based optimisation to generate
         candidates within a trust region centered around the best point found so far.
 
         Args:
@@ -472,10 +445,7 @@ class TuRBOLogEI(TuRBO):
 
         Raises:
             NotImplementedError: If n > 1, since this implementation currently only
-              supports a batch size of 1 (note that theoretically the method could be
-              extended to larger batch sizes by using qLogExpectedImprovement and
-              modifying the acquisition function optimization accordingly, but this is
-              left for future work).
+              supports a batch size of 1.
             RuntimeError: If the TuRBO state has not been initialized with
                 `tell_initial_data`.
         """
@@ -503,15 +473,14 @@ class TuRBOLogEI(TuRBO):
 
         # Find the best point (center of trust region)
         best_idx = self.train_y.argmax()
-        best_f = self.train_y.max()
         x_center = self.train_X[best_idx].clone()
 
         # Get trust region bounds (in [0,1]^d space)
         tr_lb, tr_ub = self._get_trust_region_bounds(x_center, self.state.length)
 
-        acq_func = LogExpectedImprovement(
+        acq_func = qLogNoisyExpectedImprovement(
             model=self.model,
-            best_f=best_f,
+            X_baseline=self.train_X,
         )
 
         if self.acqf_opt_strategy == "raasp":

@@ -8,8 +8,8 @@ import torch
 from bo_arena.agents import AGENTS
 from bo_arena.agents.bounce import Bounce
 from bo_arena.arena import Arena
-from bo_arena.benchmarks import BencherBenchmark
-from bo_arena.benchmarks.synthetic_benchmarks import Ackley, Michalewicz, StyblinskiTang
+from bo_arena.problems import BencherProblem
+from bo_arena.problems.synthetic_problems import Ackley, Michalewicz, StyblinskiTang
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s: %(message)s"
@@ -19,13 +19,13 @@ logger = logging.getLogger(__name__)
 
 def parse_args() -> argparse.Namespace:
     """Parse command line arguments."""
-    parser = argparse.ArgumentParser(description="Run Bayesian Optimization Benchmark")
+    parser = argparse.ArgumentParser(description="Run Bayesian Optimization Problem")
 
     parser.add_argument(
-        "--benchmark",
+        "--problem",
         type=str,
         default="lasso-dna",
-        help="Name of the benchmark to run (e.g., 'svm')",
+        help="Name of the problem to run (e.g., 'svm')",
     )
     parser.add_argument(
         "--agent",
@@ -90,22 +90,22 @@ def main() -> None:
     """Run the benchmark."""
     args = parse_args()
 
-    logger.info(f"Starting run with Benchmark: {args.benchmark}, Agent: {args.agent}")
+    logger.info(f"Starting run with Problem: {args.problem}, Agent: {args.agent}")
     logger.info(f"Num threads: {torch.get_num_threads()}")
 
-    # Initialize Benchmark
-    if args.benchmark == "ackley_dim_100":
-        benchmark = Ackley(dim=100)
-    elif args.benchmark == "michalewicz_dim_100":
-        benchmark = Michalewicz(dim=100)
-    elif args.benchmark == "styblinski_tang_dim_100":
-        benchmark = StyblinskiTang(dim=100)
+    # Initialize Problem
+    if args.problem == "ackley_dim_100":
+        problem = Ackley(dim=100)
+    elif args.problem == "michalewicz_dim_100":
+        problem = Michalewicz(dim=100)
+    elif args.problem == "styblinski_tang_dim_100":
+        problem = StyblinskiTang(dim=100)
     else:
-        benchmark = BencherBenchmark(
-            name=args.benchmark, address=args.address, port=args.port
+        problem = BencherProblem(
+            name=args.problem, address=args.address, port=args.port
         )
 
-    metadata = benchmark.metadata
+    metadata = problem.metadata
     input_dim = metadata.input_dim
 
     # Resolve n_init and n_tot
@@ -136,7 +136,7 @@ def main() -> None:
 
     # Run Arena
     bo_arena = Arena(
-        benchmark=benchmark,
+        problem=problem,
         agent=agent,
         seed=args.seed,
         n_initial_points=n_init,

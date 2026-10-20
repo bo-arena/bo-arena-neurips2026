@@ -17,5 +17,7 @@ MODULES_INIT=
 # Leave empty if singularity is already on PATH.
 SINGULARITY_SETUP_CMD=
 
-# WandB API key
-WANDB_API_KEY=your-api-key-here
+# WandB API key, entity (user or team) and project that experiment runs are logged to
+WANDB_API_KEY=
+WANDB_ENTITY=
+WANDB_PROJECT=

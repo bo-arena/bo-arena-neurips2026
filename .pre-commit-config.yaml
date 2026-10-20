@@ -11,7 +11,7 @@ repos:
         args: [--fix=lf]
       - id: trailing-whitespace
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.7
+    rev: v0.17.0
     hooks:
       - id: ruff
         types_or: [python, pyi]
@@ -19,11 +19,11 @@ repos:
       - id: ruff-format
         types_or: [python, pyi]
   - repo: https://github.com/astral-sh/uv-pre-commit
-    rev: 0.10.6
+    rev: 0.12.7
     hooks:
       - id: uv-lock # Checks that lock files are up to date
   - repo: https://github.com/crate-ci/typos
-    rev: v1.43.5
+    rev: v1.50.2
     hooks:
       - id: typos
   - repo: https://github.com/jorisroovers/gitlint
@@ -31,6 +31,6 @@ repos:
     hooks:
       - id: gitlint
   - repo: https://github.com/gitleaks/gitleaks
-    rev: v8.30.0
+    rev: v8.30.1
     hooks:
       - id: gitleaks

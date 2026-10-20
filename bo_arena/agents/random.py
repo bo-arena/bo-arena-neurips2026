@@ -11,7 +11,7 @@ from .ask_tell_agent import AskTellAgent
 class Random(AskTellAgent):
     """Random agent that samples points uniformly at random from the input space."""
 
-    def __init__(self, input_dim: int, **kwargs: object) -> None:  # noqa: ARG002
+    def __init__(self, input_dim: int, **kwargs: object) -> None:  # ruff: ignore[unused-method-argument]
         """Initialize the random agent.
 
         Args:
@@ -38,7 +38,7 @@ class Random(AskTellAgent):
         """
         return np.random.default_rng(seed).uniform(size=(n, self.input_dim))
 
-    def tell(self, data: Dataset, seed: int) -> None:  # noqa: ARG002, PLR6301
+    def tell(self, data: Dataset, seed: int) -> None:  # ruff: ignore[unused-method-argument, no-self-use]
         """Tell the agent about new observations.
 
         Note: The random agent does not use observations to inform its sampling
@@ -53,7 +53,7 @@ class Random(AskTellAgent):
         """
         return
 
-    def tell_initial_data(self, data: Dataset, seed: int) -> None:  # noqa: ARG002, PLR6301
+    def tell_initial_data(self, data: Dataset, seed: int) -> None:  # ruff: ignore[unused-method-argument, no-self-use]
         """Provide initial observations to the agent.
 
         Note: The random agent does not use observations to inform its sampling

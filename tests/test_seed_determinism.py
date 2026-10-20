@@ -3,12 +3,14 @@
 import jax
 import numpy as np
 import pytest
+from jaxtyping import Float, UInt32
 
 from bo_arena.agents.random import Random
 from bo_arena.agents.registry import AGENTS
 from bo_arena.agents.saasbo import SAASBO
 from bo_arena.arena import Arena, RunResult
-from bo_arena.benchmarks.synthetic_benchmarks import Hartmann6D
+from bo_arena.problems.synthetic_problems import Hartmann6D
+from bo_arena.utils.dataset import Dataset
 from bo_arena.utils.miscellaneous import generate_seed
 
 SKIP_REASONS = {
@@ -28,15 +30,13 @@ AGENT_PARAMS = [
 @pytest.mark.parametrize("agent_name", AGENT_PARAMS)
 def test_seed_determinism(agent_name: str) -> None:
     """Running the Arena twice with the same seed should give identical results."""
-    benchmark = Hartmann6D(embed_dim=100)
+    problem = Hartmann6D(embed_dim=100)
     agent_cls = AGENTS[agent_name]
 
     def run_arena(seed: int) -> RunResult:
-        agent = agent_cls(
-            input_dim=benchmark.metadata.input_dim, n_total_evaluations=12
-        )
+        agent = agent_cls(input_dim=problem.metadata.input_dim, n_total_evaluations=12)
         arena = Arena(
-            benchmark=benchmark,
+            problem=problem,
             agent=agent,
             seed=seed,
             batch_size=1,
@@ -49,21 +49,21 @@ def test_seed_determinism(agent_name: str) -> None:
     result_2 = run_arena(seed=42)
 
     np.testing.assert_array_equal(result_1.observed_data.X, result_2.observed_data.X)
-    np.testing.assert_array_equal(result_1.observed_data.y, result_2.observed_data.y)
+    np.testing.assert_array_equal(
+        result_1.observed_data.objectives, result_2.observed_data.objectives
+    )
 
 
 @pytest.mark.parametrize("agent_name", AGENT_PARAMS)
 def test_different_seeds_give_different_results(agent_name: str) -> None:
     """Running the Arena with different seeds should give different results."""
-    benchmark = Hartmann6D(embed_dim=100)
+    problem = Hartmann6D(embed_dim=100)
     agent_cls = AGENTS[agent_name]
 
     def run_arena(seed: int) -> RunResult:
-        agent = agent_cls(
-            input_dim=benchmark.metadata.input_dim, n_total_evaluations=12
-        )
+        agent = agent_cls(input_dim=problem.metadata.input_dim, n_total_evaluations=12)
         arena = Arena(
-            benchmark=benchmark,
+            problem=problem,
             agent=agent,
             seed=seed,
             batch_size=1,
@@ -78,12 +78,12 @@ def test_different_seeds_give_different_results(agent_name: str) -> None:
     assert not np.array_equal(result_1.observed_data.X, result_2.observed_data.X)
 
 
-def test_observed_data_is_float32() -> None:
-    """Arena.run() should return float32 arrays for both X and y."""
-    benchmark = Hartmann6D(embed_dim=100)
-    agent = Random(input_dim=benchmark.metadata.input_dim)
+def test_observed_data_is_float64() -> None:
+    """Arena.run() should return float64 arrays for both X and y."""
+    problem = Hartmann6D(embed_dim=100)
+    agent = Random(input_dim=problem.metadata.input_dim)
     arena = Arena(
-        benchmark=benchmark,
+        problem=problem,
         agent=agent,
         seed=42,
         batch_size=1,
@@ -92,8 +92,47 @@ def test_observed_data_is_float32() -> None:
     )
     result = arena.run()
 
-    assert result.observed_data.X.dtype == np.float32
-    assert result.observed_data.y.dtype == np.float32
+    assert result.observed_data.X.dtype == np.float64
+    assert result.observed_data.objectives.dtype == np.float64
+
+
+def test_evaluation_seeds_independent_of_batch_size() -> None:
+    """The seed for evaluation i should not depend on the batch size."""
+
+    class SeedRecordingHartmann6D(Hartmann6D):
+        def __init__(self) -> None:
+            super().__init__(embed_dim=100)
+            self.recorded_seeds: list[int] = []
+
+        def evaluate_points(
+            self,
+            points: Float[np.ndarray, "N D"],
+            seeds: UInt32[np.ndarray, " N"] | None = None,
+        ) -> Dataset:
+            assert seeds is not None
+            assert seeds.dtype == np.uint32
+            self.recorded_seeds.extend(int(s) for s in seeds)
+            return super().evaluate_points(points, seeds)
+
+    def run_arena(batch_size: int) -> list[int]:
+        problem = SeedRecordingHartmann6D()
+        arena = Arena(
+            problem=problem,
+            agent=Random(input_dim=problem.metadata.input_dim),
+            seed=42,
+            batch_size=batch_size,
+            n_initial_points=5,
+            n_total_evaluations=14,
+        )
+        arena.run()
+        return problem.recorded_seeds
+
+    seeds_batch_1 = run_arena(batch_size=1)
+    seeds_batch_4 = run_arena(batch_size=4)
+
+    assert len(seeds_batch_1) == 14
+    assert len(set(seeds_batch_1)) == 14
+    assert seeds_batch_1 == seeds_batch_4
 
 
 def test_seed_spawning_is_deterministic() -> None:

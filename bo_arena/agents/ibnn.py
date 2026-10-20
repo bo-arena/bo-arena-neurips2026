@@ -2,7 +2,7 @@
 
 import numpy as np
 import torch
-from botorch.acquisition import LogExpectedImprovement, qLogExpectedImprovement
+from botorch.acquisition import qLogNoisyExpectedImprovement
 from botorch.fit import fit_gpytorch_mll
 from botorch.generation import gen_candidates_scipy
 from botorch.models import SingleTaskGP
@@ -24,7 +24,7 @@ class IBNN(AskTellAgent):
 
     Fits a GP whose covariance is the kernel of an infinite-width fully-connected ReLU
     network (Lee et al., 2018), as used for BO by Li et al. (2024), and selects points
-    using the LogEI acquisition function.
+    using the qLogNEI acquisition function.
 
     The kernel's weight and bias variances are fitted by marginal likelihood alongside
     the mean and noise. See `IBNNLi2024` for the paper-faithful variant, which holds
@@ -47,7 +47,7 @@ class IBNN(AskTellAgent):
         depth: int = 3,
         dtype: torch.dtype = torch.float64,
         device: torch.device | str = "cpu",
-        **kwargs: object,  # noqa: ARG002
+        **kwargs: object,  # ruff: ignore[unused-method-argument]
     ) -> None:
         """Initialize the IBNN agent.
 
@@ -95,7 +95,7 @@ class IBNN(AskTellAgent):
         self.train_y = torch.empty(0, 1, dtype=dtype, device=device)
         self.model = None
 
-        # Bounds are always [0,1]^d since Bencher normalizes inputs
+        # Bounds are always [0,1]^d since the Arena normalizes inputs
         self.bounds = torch.stack([
             torch.zeros(self.input_dim, dtype=self.dtype, device=self.device),
             torch.ones(self.input_dim, dtype=self.dtype, device=self.device),
@@ -116,7 +116,7 @@ class IBNN(AskTellAgent):
         mll = ExactMarginalLogLikelihood(self.model.likelihood, self.model)
         fit_gpytorch_mll(mll)
 
-    def tell_initial_data(self, data: Dataset, seed: int) -> None:  # noqa: ARG002
+    def tell_initial_data(self, data: Dataset, seed: int) -> None:  # ruff: ignore[unused-method-argument]
         """Provide initial observations to the agent and fit the SingleTaskGP model.
 
         Args:
@@ -126,11 +126,11 @@ class IBNN(AskTellAgent):
         """
         self.train_X = torch.tensor(data.X, dtype=self.dtype, device=self.device)
         self.train_y = torch.tensor(
-            data.y, dtype=self.dtype, device=self.device
-        ).unsqueeze(-1)
+            data.objectives, dtype=self.dtype, device=self.device
+        )
         self._fit_model()
 
-    def tell(self, data: Dataset, seed: int) -> None:  # noqa: ARG002
+    def tell(self, data: Dataset, seed: int) -> None:  # ruff: ignore[unused-method-argument]
         """Update the agent with new observations and refit the SingleTaskGP model.
 
         Args:
@@ -140,17 +140,16 @@ class IBNN(AskTellAgent):
                 seed for any stochastic operations to ensure deterministic behavior.
         """
         new_X = torch.tensor(data.X, dtype=self.dtype, device=self.device)
-        new_y = torch.tensor(data.y, dtype=self.dtype, device=self.device).unsqueeze(-1)
+        new_y = torch.tensor(data.objectives, dtype=self.dtype, device=self.device)
 
         self.train_X = torch.cat([self.train_X, new_X])
         self.train_y = torch.cat([self.train_y, new_y])
         self._fit_model()
 
-    def ask(self, n: int, seed: int) -> Float[np.ndarray, "{n} D"]:  # noqa: ARG002
-        """Select the next points to evaluate using Log Expected Improvement (LogEI).
+    def ask(self, n: int, seed: int) -> Float[np.ndarray, "{n} D"]:  # ruff: ignore[unused-method-argument]
+        """Select the next points to evaluate using qLogNoisyExpectedImprovement.
 
-        This method optimizes the LogEI (or qLogEI for batch size > 1) acquisition
-        function.
+        This method optimizes the qLogNEI acquisition function.
 
         Args:
             n: Number of points to select (used for batch BO).
@@ -168,12 +167,10 @@ class IBNN(AskTellAgent):
             msg = "Model has not been initialized. Call tell_initial_data first."
             raise RuntimeError(msg)
 
-        best_f = self.train_y.max()
-
-        if n == 1:
-            acq_func = LogExpectedImprovement(model=self.model, best_f=best_f)
-        else:
-            acq_func = qLogExpectedImprovement(model=self.model, best_f=best_f)
+        # Use qLogNEI for consistency with Vanilla BO and Ax
+        acq_func = qLogNoisyExpectedImprovement(
+            model=self.model, X_baseline=self.train_X
+        )
 
         candidates, _ = optimize_acqf(
             acq_func,
@@ -199,7 +196,8 @@ class IBNNLi2024(IBNN):
       LogNormal prior instead.
 
     Note that the acquisition function is *not* matched: Li et al. use qEI whereas this
-    agent utilises the more numerically stable LogEI.
+    agent utilises the more numerically stable qLogNEI, with the noisy variant used for
+    consistency with Vanilla BO and Ax.
 
     Reference:
         Li, Y. L., Rudner, T. G. J., & Wilson, A. G. (2024). A Study of Bayesian

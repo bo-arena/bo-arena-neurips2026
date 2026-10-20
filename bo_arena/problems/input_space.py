@@ -37,6 +37,9 @@ class ContinuousInputSpace(InputSpace):
         upper_bounds: Float[np.ndarray, " D"],
     ) -> None:
         super().__init__()
+        if np.any(upper_bounds <= lower_bounds):
+            msg = "Upper bounds must be strictly greater than lower bounds."
+            raise ValueError(msg)
         self.lower_bounds = lower_bounds
         self.upper_bounds = upper_bounds
         self.input_dim = lower_bounds.shape[0]
@@ -58,3 +61,27 @@ class ContinuousInputSpace(InputSpace):
         unit_samples = sampler.random(n=n_points)
         samples = qmc.scale(unit_samples, self.lower_bounds, self.upper_bounds)
         return samples
+
+    def to_unit(self, X: Float[np.ndarray, "N D"]) -> Float[np.ndarray, "N D"]:
+        """Affinely map points from [lower_bounds, upper_bounds] to [0, 1]^D.
+
+        Args:
+            X: Points in the input space.
+
+        Returns:
+            Points in [0, 1]^D.
+        """
+        return (X - self.lower_bounds) / (self.upper_bounds - self.lower_bounds)
+
+    def from_unit(self, U: Float[np.ndarray, "N D"]) -> Float[np.ndarray, "N D"]:
+        """Affinely map points from [0, 1]^D to [lower_bounds, upper_bounds].
+
+        Args:
+            U: Points in [0, 1]^D.
+
+        Returns:
+            Points in the input space.
+        """
+        X = self.lower_bounds + U * (self.upper_bounds - self.lower_bounds)
+        # Clip to guard against floating-point error.
+        return np.clip(X, self.lower_bounds, self.upper_bounds)

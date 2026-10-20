@@ -4,13 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**bo-arena** is a Python package for simple, reliable, and efficient benchmarking of Bayesian Optimization (BO) algorithms. It provides an ask-tell framework to run BO agents on standardized benchmarks with a strong emphasis on reproducibility and deterministic behavior.
+**bo-arena** is a Python package for simple, reliable, and efficient benchmarking of Bayesian Optimization (BO) algorithms. It provides an ask-tell framework to run BO agents on standardized problems with a strong emphasis on reproducibility and deterministic behavior.
 
 ## Commands
 
 ```bash
 # Install all dependencies (uses uv)
-uv sync --all-extras
+uv sync --locked --all-groups
 
 # Run all tests
 uv run pytest tests
@@ -23,14 +23,11 @@ uv run ruff check .
 
 # Format
 uv run ruff format .
-
-# Run an experiment
-uv run python scripts/run.py --benchmark lasso-dna --agent random --seed 42 --batch-size 2
 ```
 
 ## Architecture
 
-The core loop is in `bo_arena/arena.py` (`Arena` class). It orchestrates the ask-tell loop between an agent and a benchmark, managing seed derivation for each step. `Arena.run()` can only be called once per instance to prevent state corruption.
+The core loop is in `bo_arena/arena.py` (`Arena` class). It orchestrates the ask-tell loop between an agent and a problem, managing seed derivation for each step. `Arena.run()` can only be called once per instance to prevent state corruption.
 
 **Agents** (`bo_arena/agents/`) implement the `AskTellAgent` ABC with three methods:
 - `ask(n, seed)` — request `n` candidate points
@@ -39,7 +36,7 @@ The core loop is in `bo_arena/arena.py` (`Arena` class). It orchestrates the ask
 
 New agents must be registered in `bo_arena/agents/registry.py`.
 
-**Benchmarks** (`bo_arena/benchmarks/`) implement the `Benchmark` ABC with `evaluate_points()`. `BencherBenchmark` wraps real-world benchmarks from the external Bencher service. Available benchmarks (rover, mopta08, lasso-dna, svm, mujoco-ant, mujoco-humanoid) are defined in `benchmark.py` metadata. All problems use the **maximization convention** (following BoTorch).
+**Problems** (`bo_arena/problems/`) implement the `Problem` ABC with `evaluate_points()`. `BencherProblem` wraps real-world problems from the external Bencher service. Available problems (rover, mopta08, lasso-dna, svm, mujoco-ant, mujoco-humanoid) are defined in `problem.py` metadata. All problems use the **maximization convention** (following BoTorch).
 
 **Seed management** (`bo_arena/utils/miscellaneous.py`) uses NumPy's `SeedSequence.spawn()` for hierarchical deterministic seeding. `seed_everything()` seeds random, numpy, torch, and CUDA. Each component (initial data generation, each ask/tell call) gets its own derived seed.
 

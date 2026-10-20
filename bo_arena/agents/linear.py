@@ -6,7 +6,7 @@ from typing import override
 import gpytorch
 import numpy as np
 import torch
-from botorch.acquisition import LogExpectedImprovement, qLogExpectedImprovement
+from botorch.acquisition import qLogNoisyExpectedImprovement
 from botorch.fit import fit_gpytorch_mll
 from botorch.generation import gen_candidates_scipy
 from botorch.models import SingleTaskGP
@@ -84,7 +84,7 @@ class SphericalLinearKernel(Kernel):
     def __init__(
         self,
         ard_num_dims: int,
-        normalize_lengthscale: bool = False,  # noqa: FBT002
+        normalize_lengthscale: bool = False,  # ruff: ignore[boolean-default-value-positional-argument]
         **kwargs: object,
     ) -> None:
         """Initialize the SphericalLinearKernel.
@@ -115,7 +115,7 @@ class SphericalLinearKernel(Kernel):
             "lengthscale_prior",
             ls_prior,
             lambda m: m.lengthscale,
-            lambda m, v: m._set_lengthscale(v),  # noqa: SLF001
+            lambda m, v: m._set_lengthscale(v),  # ruff: ignore[private-member-access]
         )
         self.register_constraint("raw_lengthscale", ls_constraint)
 
@@ -149,7 +149,7 @@ class SphericalLinearKernel(Kernel):
 
         LinearPredictionStrategy (D-space Woodbury) is efficient when N > D.
         DefaultPredictionStrategy (N-space Cholesky) is efficient when D >= N,
-        which is the common case for high-dimensional benchmarks (e.g. mujoco-humanoid).
+        which is the common case for high-dimensional problems (e.g. mujoco-humanoid).
         """
         n = train_inputs[0].shape[-2]
         d = train_inputs[0].shape[-1] + 2  # +1 stereographic projection, +1 constant
@@ -165,8 +165,8 @@ class SphericalLinearKernel(Kernel):
         self,
         x1: Float[torch.Tensor, "... N D"],
         x2: Float[torch.Tensor, "... M D"],
-        diag: bool = False,  # noqa: FBT002
-        **params: object,  # noqa: ARG002
+        diag: bool = False,  # ruff: ignore[boolean-default-value-positional-argument]
+        **params: object,  # ruff: ignore[unused-method-argument]
     ) -> (
         RootLinearOperator
         | LowRankRootLinearOperator
@@ -248,8 +248,8 @@ class LinearBO(AskTellAgent):
         acqf_opt_strategy: str = "default",
         dtype: torch.dtype = torch.float64,
         device: torch.device | str = "cpu",
-        normalize_lengthscale: bool = False,  # noqa: FBT002
-        **kwargs: object,  # noqa: ARG002
+        normalize_lengthscale: bool = False,  # ruff: ignore[boolean-default-value-positional-argument]
+        **kwargs: object,  # ruff: ignore[unused-method-argument]
     ) -> None:
         """Initialize the LinearBO agent.
 
@@ -294,7 +294,7 @@ class LinearBO(AskTellAgent):
         self.train_y = torch.empty(0, 1, dtype=dtype, device=device)
         self.model = None
 
-        # Bounds are always [0,1]^d since Bencher normalizes inputs
+        # Bounds are always [0,1]^d since the Arena normalizes inputs
         self.bounds = torch.stack([
             torch.zeros(self.input_dim, dtype=self.dtype, device=self.device),
             torch.ones(self.input_dim, dtype=self.dtype, device=self.device),
@@ -331,7 +331,7 @@ class LinearBO(AskTellAgent):
         ):
             fit_gpytorch_mll(mll)
 
-    def tell_initial_data(self, data: Dataset, seed: int) -> None:  # noqa: ARG002
+    def tell_initial_data(self, data: Dataset, seed: int) -> None:  # ruff: ignore[unused-method-argument]
         """Provide initial observations to the agent and fit the SingleTaskGP model.
 
         Args:
@@ -341,11 +341,11 @@ class LinearBO(AskTellAgent):
         """
         self.train_X = torch.tensor(data.X, dtype=self.dtype, device=self.device)
         self.train_y = torch.tensor(
-            data.y, dtype=self.dtype, device=self.device
-        ).unsqueeze(-1)
+            data.objectives, dtype=self.dtype, device=self.device
+        )
         self._fit_model()
 
-    def tell(self, data: Dataset, seed: int) -> None:  # noqa: ARG002
+    def tell(self, data: Dataset, seed: int) -> None:  # ruff: ignore[unused-method-argument]
         """Update the agent with new observations and refit the SingleTaskGP model.
 
         Args:
@@ -355,17 +355,17 @@ class LinearBO(AskTellAgent):
                 seed for any stochastic operations to ensure deterministic behavior.
         """
         new_X = torch.tensor(data.X, dtype=self.dtype, device=self.device)
-        new_y = torch.tensor(data.y, dtype=self.dtype, device=self.device).unsqueeze(-1)
+        new_y = torch.tensor(data.objectives, dtype=self.dtype, device=self.device)
 
         self.train_X = torch.cat([self.train_X, new_X])
         self.train_y = torch.cat([self.train_y, new_y])
         self._fit_model()
 
-    def ask(self, n: int, seed: int) -> Float[np.ndarray, "{n} D"]:  # noqa: ARG002
-        """Select the next points to evaluate using Log Expected Improvement (LogEI).
+    def ask(self, n: int, seed: int) -> Float[np.ndarray, "{n} D"]:  # ruff: ignore[unused-method-argument]
+        """Select the next points to evaluate using qLogNoisyExpectedImprovement.
 
-        This method optimizes the LogEI (or qLogEI for batch size > 1) acquisition
-        function using `sample_around_best=True` for better candidate generation.
+        This method optimizes the qLogNEI acquisition function using
+        `sample_around_best=True` for better candidate generation.
 
         Args:
             n: Number of points to select (used for batch BO).
@@ -383,19 +383,10 @@ class LinearBO(AskTellAgent):
             msg = "Model has not been initialized. Call tell_initial_data first."
             raise RuntimeError(msg)
 
-        best_f = self.train_y.max()
-
-        if n == 1:
-            acq_func = LogExpectedImprovement(
-                model=self.model,
-                best_f=best_f,
-            )
-        else:
-            # Use MC version for batch
-            acq_func = qLogExpectedImprovement(
-                model=self.model,
-                best_f=best_f,
-            )
+        # Use qLogNEI for consistency with Vanilla BO and Ax
+        acq_func = qLogNoisyExpectedImprovement(
+            model=self.model, X_baseline=self.train_X
+        )
 
         candidates, _ = optimize_acqf(
             acq_func,

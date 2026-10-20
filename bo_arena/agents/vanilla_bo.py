@@ -38,7 +38,7 @@ class VanillaBO(AskTellAgent):
         acqf_opt_strategy: str = "default",
         dtype: torch.dtype = torch.float64,
         device: torch.device | str = "cpu",
-        **kwargs: object,  # noqa: ARG002
+        **kwargs: object,  # ruff: ignore[unused-method-argument]
     ) -> None:
         """Initialize the VanillaBO agent.
 
@@ -80,7 +80,7 @@ class VanillaBO(AskTellAgent):
         self.train_y = torch.empty(0, 1, dtype=dtype, device=device)
         self.model = None
 
-        # Bounds are always [0,1]^d since Bencher normalizes inputs
+        # Bounds are always [0,1]^d since the Arena normalizes inputs
         self.bounds = torch.stack([
             torch.zeros(self.input_dim, dtype=self.dtype, device=self.device),
             torch.ones(self.input_dim, dtype=self.dtype, device=self.device),
@@ -99,7 +99,7 @@ class VanillaBO(AskTellAgent):
         mll = ExactMarginalLogLikelihood(self.model.likelihood, self.model)
         fit_gpytorch_mll(mll)
 
-    def tell_initial_data(self, data: Dataset, seed: int) -> None:  # noqa: ARG002
+    def tell_initial_data(self, data: Dataset, seed: int) -> None:  # ruff: ignore[unused-method-argument]
         """Provide initial observations to the agent and fit the SingleTaskGP model.
 
         Args:
@@ -109,11 +109,11 @@ class VanillaBO(AskTellAgent):
         """
         self.train_X = torch.tensor(data.X, dtype=self.dtype, device=self.device)
         self.train_y = torch.tensor(
-            data.y, dtype=self.dtype, device=self.device
-        ).unsqueeze(-1)
+            data.objectives, dtype=self.dtype, device=self.device
+        )
         self._fit_model()
 
-    def tell(self, data: Dataset, seed: int) -> None:  # noqa: ARG002
+    def tell(self, data: Dataset, seed: int) -> None:  # ruff: ignore[unused-method-argument]
         """Update the agent with new observations and refit the SingleTaskGP model.
 
         Args:
@@ -123,13 +123,13 @@ class VanillaBO(AskTellAgent):
                 seed for any stochastic operations to ensure deterministic behavior.
         """
         new_X = torch.tensor(data.X, dtype=self.dtype, device=self.device)
-        new_y = torch.tensor(data.y, dtype=self.dtype, device=self.device).unsqueeze(-1)
+        new_y = torch.tensor(data.objectives, dtype=self.dtype, device=self.device)
 
         self.train_X = torch.cat([self.train_X, new_X])
         self.train_y = torch.cat([self.train_y, new_y])
         self._fit_model()
 
-    def ask(self, n: int, seed: int) -> Float[np.ndarray, "{n} D"]:  # noqa: ARG002
+    def ask(self, n: int, seed: int) -> Float[np.ndarray, "{n} D"]:  # ruff: ignore[unused-method-argument]
         """Select the next points to evaluate using qLogNEI.
 
         This method optimizes the q-batch Log-Noisy-Expected-Improvement acquisition
@@ -151,8 +151,7 @@ class VanillaBO(AskTellAgent):
             msg = "Model has not been initialized. Call tell_initial_data first."
             raise RuntimeError(msg)
 
-        # Hvarfner et al. use the MC-based qLogNEI for all batch sizes, including
-        # for q=1.
+        # Hvarfner et al. use the MC-based qLogNEI
         acq_func = qLogNoisyExpectedImprovement(
             model=self.model,
             X_baseline=self.train_X,
@@ -190,7 +189,7 @@ class VanillaBOYu2026(AskTellAgent):
         acqf_opt_strategy: str = "default",
         dtype: torch.dtype = torch.float64,
         device: torch.device | str = "cpu",
-        **kwargs: object,  # noqa: ARG002
+        **kwargs: object,  # ruff: ignore[unused-method-argument]
     ) -> None:
         """Initialize the VanillaBOYu2026 agent.
 
@@ -226,7 +225,7 @@ class VanillaBOYu2026(AskTellAgent):
         self.train_y = torch.empty(0, 1, dtype=dtype, device=device)
         self.model = None
 
-        # Bounds are always [0,1]^d since Bencher normalizes inputs
+        # Bounds are always [0,1]^d since the Arena normalizes inputs
         self.bounds = torch.stack([
             torch.zeros(self.input_dim, dtype=self.dtype, device=self.device),
             torch.ones(self.input_dim, dtype=self.dtype, device=self.device),
@@ -251,7 +250,7 @@ class VanillaBOYu2026(AskTellAgent):
         )
         fit_gpytorch_mll(mll)
 
-    def tell_initial_data(self, data: Dataset, seed: int) -> None:  # noqa: ARG002
+    def tell_initial_data(self, data: Dataset, seed: int) -> None:  # ruff: ignore[unused-method-argument]
         """Provide initial observations to the agent and fit the SingleTaskGP model.
 
         Args:
@@ -260,11 +259,11 @@ class VanillaBOYu2026(AskTellAgent):
         """
         self.train_X = torch.tensor(data.X, dtype=self.dtype, device=self.device)
         self.train_y = torch.tensor(
-            data.y, dtype=self.dtype, device=self.device
-        ).unsqueeze(-1)
+            data.objectives, dtype=self.dtype, device=self.device
+        )
         self._fit_model()
 
-    def tell(self, data: Dataset, seed: int) -> None:  # noqa: ARG002
+    def tell(self, data: Dataset, seed: int) -> None:  # ruff: ignore[unused-method-argument]
         """Update the agent with new observations and refit the SingleTaskGP model.
 
         Args:
@@ -273,13 +272,13 @@ class VanillaBOYu2026(AskTellAgent):
             seed: Random seed for reproducibility.
         """
         new_X = torch.tensor(data.X, dtype=self.dtype, device=self.device)
-        new_y = torch.tensor(data.y, dtype=self.dtype, device=self.device).unsqueeze(-1)
+        new_y = torch.tensor(data.objectives, dtype=self.dtype, device=self.device)
 
         self.train_X = torch.cat([self.train_X, new_X])
         self.train_y = torch.cat([self.train_y, new_y])
         self._fit_model()
 
-    def ask(self, n: int, seed: int) -> Float[np.ndarray, "{n} D"]:  # noqa: ARG002
+    def ask(self, n: int, seed: int) -> Float[np.ndarray, "{n} D"]:  # ruff: ignore[unused-method-argument]
         """Select the next points to evaluate using Expected Improvement (EI).
 
         This method optimizes the EI acquisition function.
@@ -374,7 +373,7 @@ class WindowVanillaBO(VanillaBO):
         """Return a string representation of the agent."""
         return f"window_{self.window_size}_vanilla_bo"
 
-    def tell_initial_data(self, data: Dataset, seed: int) -> None:  # noqa: ARG002
+    def tell_initial_data(self, data: Dataset, seed: int) -> None:  # ruff: ignore[unused-method-argument]
         """Provide initial observations to the agent and fit the SingleTaskGP model.
 
         Note that this method retains only the most recent `window_size` observations
@@ -386,15 +385,15 @@ class WindowVanillaBO(VanillaBO):
         """
         self.train_X = torch.tensor(data.X, dtype=self.dtype, device=self.device)
         self.train_y = torch.tensor(
-            data.y, dtype=self.dtype, device=self.device
-        ).unsqueeze(-1)
+            data.objectives, dtype=self.dtype, device=self.device
+        )
         # Retain only the most recent `window_size` observations
         if self.train_X.shape[0] > self.window_size:
             self.train_X = self.train_X[-self.window_size :]
             self.train_y = self.train_y[-self.window_size :]
         self._fit_model()
 
-    def tell(self, data: Dataset, seed: int) -> None:  # noqa: ARG002
+    def tell(self, data: Dataset, seed: int) -> None:  # ruff: ignore[unused-method-argument]
         """Update the agent with new observations and refit the SingleTaskGP model.
 
         Note that this method retains only the most recent `window_size` observations
@@ -406,7 +405,7 @@ class WindowVanillaBO(VanillaBO):
             seed: Random seed for reproducibility.
         """
         new_X = torch.tensor(data.X, dtype=self.dtype, device=self.device)
-        new_y = torch.tensor(data.y, dtype=self.dtype, device=self.device).unsqueeze(-1)
+        new_y = torch.tensor(data.objectives, dtype=self.dtype, device=self.device)
 
         self.train_X = torch.cat([self.train_X, new_X])
         self.train_y = torch.cat([self.train_y, new_y])
@@ -511,7 +510,7 @@ class BestWindowVanillaBO(VanillaBO):
         self.train_X = self.train_X[unique_indices]
         self.train_y = self.train_y[unique_indices]
 
-    def tell_initial_data(self, data: Dataset, seed: int) -> None:  # noqa: ARG002
+    def tell_initial_data(self, data: Dataset, seed: int) -> None:  # ruff: ignore[unused-method-argument]
         """Provide initial observations to the agent and fit the SingleTaskGP model.
 
         Args:
@@ -520,12 +519,12 @@ class BestWindowVanillaBO(VanillaBO):
         """
         self.train_X = torch.tensor(data.X, dtype=self.dtype, device=self.device)
         self.train_y = torch.tensor(
-            data.y, dtype=self.dtype, device=self.device
-        ).unsqueeze(-1)
+            data.objectives, dtype=self.dtype, device=self.device
+        )
         self._apply_window()
         self._fit_model()
 
-    def tell(self, data: Dataset, seed: int) -> None:  # noqa: ARG002
+    def tell(self, data: Dataset, seed: int) -> None:  # ruff: ignore[unused-method-argument]
         """Update the agent with new observations and refit the SingleTaskGP model.
 
         Args:
@@ -534,7 +533,7 @@ class BestWindowVanillaBO(VanillaBO):
             seed: Random seed for reproducibility.
         """
         new_X = torch.tensor(data.X, dtype=self.dtype, device=self.device)
-        new_y = torch.tensor(data.y, dtype=self.dtype, device=self.device).unsqueeze(-1)
+        new_y = torch.tensor(data.objectives, dtype=self.dtype, device=self.device)
 
         self.train_X = torch.cat([self.train_X, new_X])
         self.train_y = torch.cat([self.train_y, new_y])

@@ -2,7 +2,7 @@
 
 import numpy as np
 import torch
-from botorch.acquisition.logei import qLogExpectedImprovement
+from botorch.acquisition.logei import qLogNoisyExpectedImprovement
 from botorch.fit import fit_fully_bayesian_model_nuts
 from botorch.generation import gen_candidates_scipy
 from botorch.models.fully_bayesian import SaasFullyBayesianSingleTaskGP
@@ -21,12 +21,12 @@ def check_jax_sees_gpu() -> None:
     Raises:
         RuntimeError: If JAX is on the CPU.
     """
-    import jax  # noqa: PLC0415
+    import jax  # ruff: ignore[import-outside-top-level]
 
     if jax.default_backend() == "cpu":
         msg = (
             "SAASBO was submitted with device='cuda', but JAX is running on the CPU. "
-            "jax[cuda12] is a dependency on Linux, so either the environment is "
+            "jax[cuda13] is a dependency on Linux, so either the environment is "
             "stale (re-run uv sync) or the plugin failed to initialise here."
         )
         raise RuntimeError(msg)
@@ -54,7 +54,7 @@ class SAASBO(AskTellAgent):
         warmup_steps: int = 512,
         num_samples: int = 256,
         thinning: int = 16,
-        **kwargs: object,  # noqa: ARG002
+        **kwargs: object,  # ruff: ignore[unused-method-argument]
     ) -> None:
         """Initialize the SAASBO agent.
 
@@ -101,7 +101,7 @@ class SAASBO(AskTellAgent):
         self.train_y = torch.empty(0, 1, dtype=dtype, device=device)
         self.model = None
 
-        # Bounds are always [0,1]^d since Bencher normalizes inputs
+        # Bounds are always [0,1]^d since the Arena normalizes inputs
         self.bounds = torch.stack([
             torch.zeros(self.input_dim, dtype=self.dtype, device=self.device),
             torch.ones(self.input_dim, dtype=self.dtype, device=self.device),
@@ -131,7 +131,7 @@ class SAASBO(AskTellAgent):
             seed=seed,
         )
         # Every fit is a new shape, so the cache is never used and keeps growing on CPU.
-        import jax  # noqa: PLC0415
+        import jax  # ruff: ignore[import-outside-top-level]
 
         jax.clear_caches()
         torch.cuda.empty_cache()
@@ -146,8 +146,8 @@ class SAASBO(AskTellAgent):
         """
         self.train_X = torch.tensor(data.X, dtype=self.dtype, device=self.device)
         self.train_y = torch.tensor(
-            data.y, dtype=self.dtype, device=self.device
-        ).unsqueeze(-1)
+            data.objectives, dtype=self.dtype, device=self.device
+        )
         self._fit_model(seed)
 
     def tell(self, data: Dataset, seed: int) -> None:
@@ -160,16 +160,16 @@ class SAASBO(AskTellAgent):
                 seed for any stochastic operations to ensure deterministic behavior.
         """
         new_X = torch.tensor(data.X, dtype=self.dtype, device=self.device)
-        new_y = torch.tensor(data.y, dtype=self.dtype, device=self.device).unsqueeze(-1)
+        new_y = torch.tensor(data.objectives, dtype=self.dtype, device=self.device)
 
         self.train_X = torch.cat([self.train_X, new_X])
         self.train_y = torch.cat([self.train_y, new_y])
         self._fit_model(seed)
 
-    def ask(self, n: int, seed: int) -> Float[np.ndarray, "{n} D"]:  # noqa: ARG002
-        """Select the next points to evaluate using Log Expected Improvement (qLogEI).
+    def ask(self, n: int, seed: int) -> Float[np.ndarray, "{n} D"]:  # ruff: ignore[unused-method-argument]
+        """Select the next points to evaluate using qLogNoisyExpectedImprovement.
 
-        This method optimizes the qLogEI acquisition function using MCMC samples from
+        This method optimizes the qLogNEI acquisition function using MCMC samples from
         the SAAS model.
 
         Args:
@@ -188,12 +188,10 @@ class SAASBO(AskTellAgent):
             msg = "Model has not been initialized. Call tell_initial_data first."
             raise RuntimeError(msg)
 
-        best_f = self.train_y.max()
-
-        # Use qLogEI for both single and batch cases since SAAS model uses MCMC samples
-        acq_func = qLogExpectedImprovement(
+        # Use qLogNEI for consistency with Vanilla BO and Ax
+        acq_func = qLogNoisyExpectedImprovement(
             model=self.model,
-            best_f=best_f,
+            X_baseline=self.train_X,
         )
         candidates, _ = optimize_acqf(
             acq_func,

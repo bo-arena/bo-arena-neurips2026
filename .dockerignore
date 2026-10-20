@@ -1,0 +1,4 @@
+# Only send the files the image needs (keeps .venv, images/, etc. out of the build context)
+*
+!pyproject.toml
+!uv.lock

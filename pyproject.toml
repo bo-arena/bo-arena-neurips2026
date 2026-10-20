@@ -4,29 +4,24 @@ name = "bo-arena"
 dynamic = ["version"]
 description = "Arena for simple, reliable, and efficient benchmarking of BO algorithms."
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.14"
 dependencies = [
-    "jaxtyping>=0.3.9,<0.4",
-    "wandb>=0.25.1,<0.26",
-    "numpy>=2.4,<3",
-    "scipy>=1.17,<2",
-    "bencherscaffold@git+https://github.com/LeoIV/BencherScaffold@e1c714c30c00b8a699ff87390229e604ebc31cec",
-    "torch>=2.11,<3",
-    "botorch[fully_bayesian]>=0.18.1,<0.19",
-    "jax[cuda12]>=0.4.35,<0.10; sys_platform == 'linux'",
-    "gpytorch>=1.15,<2",
+    "jaxtyping>=0.3.11",
+    "wandb>=0.31",
+    "numpy>=2.5.4",
+    "scipy>=1.18.1",
+    "bencherscaffold@git+https://github.com/LeoIV/BencherScaffold@c119035a059cf34c82c3183fa53634070df3a3d6",
+    "torch>=2.14.1",
+    "botorch[fully_bayesian]>=0.18.1",
+    "jax[cuda13]>=0.9.2; sys_platform == 'linux'",
+    "gpytorch>=1.15.2",
 ]
 
-[project.optional-dependencies]
-test = ["beartype>=0.22.9,<0.23", "pytest>=9,<10"]
-dev = [
-    "ruff>=0.15.7,<0.16",
-    "pre-commit>=4.5,<5",
-    "jupytext>=1.19,<2",
-    "ipykernel>=7.2,<8",
-]
-experiments = ["py-cpuinfo>=9,<10"]
-plotting = ["matplotlib>=3.10,<4", "tueplots>=0.2.4,<0.3"]
+[dependency-groups]
+test = ["beartype>=0.23.1", "pytest>=9.1.1"]
+dev = ["ruff==0.17.0", "pre-commit>=4.7", "jupytext>=1.19.6", "ipykernel>=7.4"]
+experiments = ["py-cpuinfo>=9"]
+plotting = ["matplotlib>=3.11.2", "tueplots>=0.2.5"]
 
 # PEP 518 Build System Configuration
 # See https://peps.python.org/pep-0518/
@@ -57,7 +52,7 @@ addopts = [
 [tool.ruff]
 preview = true
 exclude = [".git", "__pycache__", ".venv", "notebooks"]
-target-version = "py313"
+target-version = "py314"
 
 [tool.ruff.lint]
 select = [
@@ -112,62 +107,67 @@ select = [
 ]
 ignore = [
     # Conflicting lint rules with Ruff's formatter
-    "W191",
-    "E111",
-    "E114",
-    "E117",
-    "D206",
-    "D300",
-    "Q000",
-    "Q001",
-    "Q002",
-    "Q003",
-    "COM812",
-    "COM819",
-    "ISC001",
-    "ISC002",
-    "FBT001",
-    "FBT003",
-    "TD003",
-    "TRY003",
+    "tab-indentation",
+    "indentation-with-invalid-multiple",
+    "indentation-with-invalid-multiple-comment",
+    "over-indented",
+    "docstring-tab-indentation",
+    "triple-single-quotes",
+    "bad-quotes-inline-string",
+    "bad-quotes-multiline-string",
+    "bad-quotes-docstring",
+    "avoidable-escaped-quote",
+    "missing-trailing-comma",
+    "prohibited-trailing-comma",
+    "single-line-implicit-string-concatenation",
+    "multi-line-implicit-string-concatenation",
+    "boolean-type-hint-positional-argument",
+    "boolean-positional-value-in-call",
+    "missing-todo-link",
+    "raise-vanilla-args",
     # It is fine to override loop variables when it is clear that only the value that
     # overrides the original is needed
-    "PLW2901",
+    "redefined-loop-name",
     # It is often impossible to enforce a hard limit on the number of arguments
-    "PLR0913",
-    "PLR0917",
+    "too-many-arguments",
+    "too-many-positional-arguments",
     # The performance of logging is not a concern for us; in return, using f-strings
     # makes the logged messages much more readable in code
-    "G004",
+    "logging-f-string",
     # We do not annotate __init__ methods -- args are specified in the class docstring
-    "D107",
+    "undocumented-public-init",
     # This is research code, attribute names are more flexible with casing
-    "E741",
-    "N802",
-    "N803",
-    "N806",
-    "N812",
-    "N815",
-    "N816",
+    "ambiguous-variable-name",
+    "invalid-function-name",
+    "invalid-argument-name",
+    "non-lowercase-variable-in-function",
+    "lowercase-imported-as-non-lowercase",
+    "mixed-case-variable-in-class-scope",
+    "mixed-case-variable-in-global-scope",
     # Magic values are fine for academic code as longs as they are not overused
-    "PLR2004",
-    "PLR0912",
-    "PLR0914",
+    "magic-value-comparison",
+    "too-many-branches",
+    "too-many-locals",
     # In-place assigments are not always possible in torch
-    "PLR6104",
+    "non-augmented-assignment",
     # Assignments before return can emphasize the code's semantic structure
-    "RET504",
-    "S403",
+    "unnecessary-assign",
+    "suspicious-pickle-import",
     # We don't do cryptography
-    "S311",
+    "suspicious-non-cryptographic-random-usage",
     # The subprocess module is fine as long as one validates the commands
-    "S404",
+    "suspicious-subprocess-import",
     # Jaxtyping is incompatible with the checking of annotation strings
-    "F722",
+    "forward-annotation-syntax-error",
+    # Jaxtyping/beartype evaluate annotations at runtime, so imports used only in
+    # annotations must not be moved into TYPE_CHECKING blocks
+    "typing-only-first-party-import",
+    "typing-only-third-party-import",
+    "typing-only-standard-library-import",
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"test_*.py" = ["S101"] # Use of assert is allowed in test files
+"test_*.py" = ["assert"] # Use of assert is allowed in test files
 
 [tool.ruff.lint.mccabe]
 max-complexity = 18
@@ -179,9 +179,9 @@ convention = "google"
 known-third-party = ["wandb"]
 
 [tool.uv.sources]
-torch = [{ index = "pytorch-cu128", marker = "sys_platform == 'linux'" }]
+torch = [{ index = "pytorch-cu130", marker = "sys_platform == 'linux'" }]
 
 [[tool.uv.index]]
-name = "pytorch-cu128"
-url = "https://download.pytorch.org/whl/cu128"
+name = "pytorch-cu130"
+url = "https://download.pytorch.org/whl/cu130"
 explicit = true

@@ -17,17 +17,14 @@ import wandb
 from bo_arena.agents import AGENTS
 from bo_arena.agents.bounce import Bounce
 from bo_arena.arena import Arena
-from bo_arena.benchmarks import BencherBenchmark
-from bo_arena.benchmarks.synthetic_benchmarks import Ackley, Michalewicz, StyblinskiTang
 from bo_arena.experiment_seeds import EXPERIMENT_SEEDS
+from bo_arena.problems import BencherProblem
+from bo_arena.problems.synthetic_problems import Ackley, Michalewicz, StyblinskiTang
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 RESULTS_DIR = ROOT_DIR / "results"
 
 logger = logging.getLogger(__name__)
-
-WANDB_ENTITY = "bo-arena"
-WANDB_PROJECT = "bo-arena-v2"
 
 
 def parse_args() -> argparse.Namespace:
@@ -35,10 +32,10 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run Bayesian Optimization Benchmark")
 
     parser.add_argument(
-        "--benchmark",
+        "--problem",
         type=str,
         default="lasso-dna",
-        help="Name of the benchmark to run (e.g., 'svm')",
+        help="Name of the problem to run (e.g., 'svm')",
     )
     parser.add_argument(
         "--agent",
@@ -110,11 +107,11 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def main() -> None:  # noqa: PLR0915
+def main() -> None:  # ruff: ignore[too-many-statements]
     """Run the benchmark."""
     # Ensure working tree is clean for reproducibility
     git_status = subprocess.run(
-        ["git", "status", "--porcelain"],  # noqa: S607
+        ["git", "status", "--porcelain"],  # ruff: ignore[start-process-with-partial-path]
         capture_output=True,
         text=True,
         check=True,
@@ -131,18 +128,30 @@ def main() -> None:  # noqa: PLR0915
     args = parse_args()
     seed = EXPERIMENT_SEEDS[args.seed_idx]
 
-    # Initialize Benchmark and Agent
-    if args.benchmark == "ackley_dim_100":
-        benchmark = Ackley(dim=100)
-    elif args.benchmark == "michalewicz_dim_100":
-        benchmark = Michalewicz(dim=100)
-    elif args.benchmark == "styblinski_tang_dim_100":
-        benchmark = StyblinskiTang(dim=100)
+    # wandb.init() reads the entity and project from these environment variables.
+    if not args.no_wandb:
+        missing = [
+            v for v in ("WANDB_ENTITY", "WANDB_PROJECT") if not os.environ.get(v)
+        ]
+        if missing:
+            msg = (
+                f"Environment variables {', '.join(missing)} must be set for WandB "
+                "logging (see slurm/config.sh.example), or pass --no-wandb."
+            )
+            raise RuntimeError(msg)
+
+    # Initialize Problem and Agent
+    if args.problem == "ackley_dim_100":
+        problem = Ackley(dim=100)
+    elif args.problem == "michalewicz_dim_100":
+        problem = Michalewicz(dim=100)
+    elif args.problem == "styblinski_tang_dim_100":
+        problem = StyblinskiTang(dim=100)
     else:
-        benchmark = BencherBenchmark(
-            name=args.benchmark, address=args.address, port=args.port
+        problem = BencherProblem(
+            name=args.problem, address=args.address, port=args.port
         )
-    metadata = benchmark.metadata
+    metadata = problem.metadata
     input_dim = metadata.input_dim
 
     # Resolve n_init and n_tot
@@ -171,8 +180,8 @@ def main() -> None:  # noqa: PLR0915
         raise ValueError(msg)
 
     # Build experiment directory and file paths
-    # Structure: results/{benchmark}/{agent}/acqf_opt_{strategy}/[batch_{N}/]
-    problem_name = args.benchmark
+    # Structure: results/{problem}/{agent}/acqf_opt_{strategy}/[batch_{N}/]
+    problem_name = args.problem
     agent_name = str(agent)
     acqf_opt_dir = f"acqf_opt_{args.acqf_opt_strategy}"
     experiment_dir = RESULTS_DIR / problem_name / agent_name / acqf_opt_dir
@@ -202,7 +211,7 @@ def main() -> None:  # noqa: PLR0915
 
     # Build per-seed config capturing experiment parameters and environment
     git_hash = subprocess.run(
-        ["git", "rev-parse", "HEAD"],  # noqa: S607
+        ["git", "rev-parse", "HEAD"],  # ruff: ignore[start-process-with-partial-path]
         capture_output=True,
         text=True,
         check=False,
@@ -210,7 +219,7 @@ def main() -> None:  # noqa: PLR0915
     ).stdout.strip()
 
     config = {
-        "benchmark": problem_name,
+        "problem": problem_name,
         "agent": agent_name,
         "acqf_opt_strategy": args.acqf_opt_strategy,
         "n_initial_points": n_init,
@@ -254,8 +263,6 @@ def main() -> None:  # noqa: PLR0915
     if not args.no_wandb:
         os.environ["WANDB_MODE"] = "offline"
         wandb_run = wandb.init(
-            entity=WANDB_ENTITY,
-            project=WANDB_PROJECT,
             name=f"seed_{seed}",
             group=wandb_group,
             config={**config, "seed": seed},
@@ -264,7 +271,7 @@ def main() -> None:  # noqa: PLR0915
 
     # Run Arena
     bo_arena = Arena(
-        benchmark=benchmark,
+        problem=problem,
         agent=agent,
         seed=seed,
         n_initial_points=n_init,
@@ -277,7 +284,7 @@ def main() -> None:  # noqa: PLR0915
 
     # Save results
     np.save(xs_file, result.observed_data.X)
-    np.save(ys_file, result.observed_data.y)
+    np.save(ys_file, result.observed_data.objectives[:, 0])
     np.savez(
         times_file,
         ask=np.array(result.ask_times),

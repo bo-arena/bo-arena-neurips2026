@@ -2,10 +2,7 @@
 
 import numpy as np
 import torch
-from botorch.acquisition import (
-    ExpectedImprovement,
-    qExpectedImprovement,
-)
+from botorch.acquisition import qNoisyExpectedImprovement
 from botorch.fit import fit_gpytorch_mll
 from botorch.generation import gen_candidates_scipy
 from botorch.models import SingleTaskGP
@@ -27,11 +24,12 @@ class HistoricBO(AskTellAgent):
 
     This agent implements a typical GP-based BO approach prior to the introduction of
     DSP in Hvarfner et al. (2024), and logEI in Ament et al. (2023). In particular, it
-    uses the standard Expected Improvement (EI) acquisition function, and a GP with a
-    Matérn-5/2 kernel with a lengthscale prior of Gamma(3, 6) and an outputscale prior
-    of Gamma(2, 0.15). It also uses a Gamma(1.1, 0.05) prior on the noise, with a
-    minimum noise value of 1e-4. These were  the defaults in BoTorch prior to the 0.12
-    release: https://github.com/meta-pytorch/botorch/releases/tag/v0.12.0.
+    uses the standard Expected Improvement (EI) acquisition function (specifically the
+    qNoisy variant, for consistency with VanillaBO and Ax, which use qLogNEI), and a
+    GP with a Matérn-5/2 kernel with a lengthscale prior of Gamma(3, 6) and an
+    outputscale prior of Gamma(2, 0.15). It also uses a Gamma(1.1, 0.05) prior on the
+    noise, with a minimum noise value of 1e-4. These were  the defaults in BoTorch
+    prior to the 0.12 release: https://github.com/meta-pytorch/botorch/releases/tag/v0.12.0.
 
     Reference:
         Hvarfner, C., Hellsten, E. O., & Nardi, L. (2024). Vanilla Bayesian Optimization
@@ -48,7 +46,7 @@ class HistoricBO(AskTellAgent):
         acqf_opt_strategy: str = "default",
         dtype: torch.dtype = torch.float64,
         device: torch.device | str = "cpu",
-        **kwargs: object,  # noqa: ARG002
+        **kwargs: object,  # ruff: ignore[unused-method-argument]
     ) -> None:
         """Initialise the HistoricBO agent.
 
@@ -89,7 +87,7 @@ class HistoricBO(AskTellAgent):
         self.train_y = torch.empty(0, 1, dtype=dtype, device=device)
         self.model = None
 
-        # Bounds are always [0,1]^d since Bencher normalizes inputs
+        # Bounds are always [0,1]^d since the Arena normalizes inputs
         self.bounds = torch.stack([
             torch.zeros(self.input_dim, dtype=self.dtype, device=self.device),
             torch.ones(self.input_dim, dtype=self.dtype, device=self.device),
@@ -133,7 +131,7 @@ class HistoricBO(AskTellAgent):
         mll = ExactMarginalLogLikelihood(self.model.likelihood, self.model)
         fit_gpytorch_mll(mll)
 
-    def tell_initial_data(self, data: Dataset, seed: int) -> None:  # noqa: ARG002
+    def tell_initial_data(self, data: Dataset, seed: int) -> None:  # ruff: ignore[unused-method-argument]
         """Provide initial observations to the agent and fit the SingleTaskGP model.
 
         Args:
@@ -143,11 +141,11 @@ class HistoricBO(AskTellAgent):
         """
         self.train_X = torch.tensor(data.X, dtype=self.dtype, device=self.device)
         self.train_y = torch.tensor(
-            data.y, dtype=self.dtype, device=self.device
-        ).unsqueeze(-1)
+            data.objectives, dtype=self.dtype, device=self.device
+        )
         self._fit_model()
 
-    def tell(self, data: Dataset, seed: int) -> None:  # noqa: ARG002
+    def tell(self, data: Dataset, seed: int) -> None:  # ruff: ignore[unused-method-argument]
         """Update the agent with new observations and refit the SingleTaskGP model.
 
         Args:
@@ -157,13 +155,13 @@ class HistoricBO(AskTellAgent):
                 seed for any stochastic operations to ensure deterministic behavior.
         """
         new_X = torch.tensor(data.X, dtype=self.dtype, device=self.device)
-        new_y = torch.tensor(data.y, dtype=self.dtype, device=self.device).unsqueeze(-1)
+        new_y = torch.tensor(data.objectives, dtype=self.dtype, device=self.device)
 
         self.train_X = torch.cat([self.train_X, new_X])
         self.train_y = torch.cat([self.train_y, new_y])
         self._fit_model()
 
-    def ask(self, n: int, seed: int) -> Float[np.ndarray, "{n} D"]:  # noqa: ARG002
+    def ask(self, n: int, seed: int) -> Float[np.ndarray, "{n} D"]:  # ruff: ignore[unused-method-argument]
         """Select the next points to evaluate using Expected Improvement (EI).
 
         This method optimizes the EI (or qEI for batch size > 1) acquisition
@@ -185,19 +183,8 @@ class HistoricBO(AskTellAgent):
             msg = "Model has not been initialized. Call tell_initial_data first."
             raise RuntimeError(msg)
 
-        best_f = self.train_y.max()
-
-        if n == 1:
-            acq_func = ExpectedImprovement(
-                model=self.model,
-                best_f=best_f,
-            )
-        else:
-            # Use MC version for batch
-            acq_func = qExpectedImprovement(
-                model=self.model,
-                best_f=best_f,
-            )
+        # Use qNoisy variant for consistency with Vanilla BO and Ax
+        acq_func = qNoisyExpectedImprovement(model=self.model, X_baseline=self.train_X)
 
         candidates, _ = optimize_acqf(
             acq_func,

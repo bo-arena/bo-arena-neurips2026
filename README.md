@@ -27,7 +27,7 @@ In order to run a quick experiment with `bo-arena`, using similar code to the sn
 3. Run the `quickstart` notebook in the `notebooks/` directory, which demonstrates how to run a simple experiment with `bo-arena` using the `bencher` server you just started. In order to convert from `.py` to `.ipynb` you can run `uv run jupytext --to ipynb <notebook>.py`.
 
 ### Running Experiments with bencher on a SLURM Cluster
-The `slurm` directory contains SLURM batch scripts for building Singularity containers and running `bencher` and `bo-arena` experiments on a SLURM cluster. These scripts may require modifications to paths, resource specifications, and other parameters to fit your specific cluster setup.
+The `slurm` directory contains SLURM batch scripts for pulling Singularity images and running `bencher` and `bo-arena` experiments on a SLURM cluster. These scripts may require modifications to paths, resource specifications, and other parameters to fit your specific cluster setup.
 
 Each experiment job is self-contained: it starts a `bencher` server as a sidecar process, runs the experiment, then shuts the server down on exit. This means no shared `bencher` server is needed, jobs scale independently, and there is no coordination between jobs. Each job gives its sidecar a private set of Unix domain sockets under `$TMPDIR/bencher-$SLURM_JOB_ID`, so jobs co-scheduled on the same node cannot reach each other's server. There are two containers involved per job:
 
@@ -45,14 +45,14 @@ In order to run experiments, follow these steps:
 cluster-specific paths, partition names and WandB credentials (if running with WandB,
 as is the default behaviour). This file is gitignored.
 2. Obtain the Singularity images, which are expected to be in an `images/` directory.
-    - **`bencher`**: pull with `sbatch pull_bencher_singularity.sbatch`.
-    - **`bo-arena`**: build with `sbatch build_bo_arena_singularity.sbatch`. Note that this needs `--fakeroot`; on clusters without such access, build the image elsewhere and copy it in.
+    - **`bencher`**: pull with `bash slurm/submit.sh pull_bencher_singularity.sbatch`.
+    - **`bo-arena`**: pull with `bash slurm/submit.sh build_bo_arena_singularity.sbatch`.
 
    The exact images used for running the experiments in the paper will be released upon publication.
 3. Run experiments with `submit.py`. Commands used to run the experiments can be found below. Note that `submit.py` performs operations such as setting time and memory limits, and deciding whether to run on CPU or GPU depending on the algorithm/task being run, so you may wish to edit this depending on your specific cluster setup. The main code for actually running the experiments, which is executed via `submit.py`, can be found in `scripts/experiment_runner.py`. The core logic is very similar to the code snippet provided in our paper, with additional code added for performing tasks such as (optionally) initialising a WandB run, setting up a logger, ensuring the working tree is clean for reproducibility, and saving results.
-4. (Optional, if using WandB) - Sync WandB results after experiments finish using `bash submit.sh sync_wandb.sbatch`. Experiments log to WandB in offline mode to avoid API rate limits with many concurrent jobs.
+4. (Optional, if using WandB) - Sync WandB results after experiments finish using `bash slurm/submit.sh sync_wandb.sbatch`. Experiments log to WandB in offline mode to avoid API rate limits with many concurrent jobs.
 
-Note that if you wish to run experiments without using the SLURM scripts, or building the Singularity image for `bo-arena`, you can do so by creating a virtual environment with the dependencies specified in `uv.lock` (which were used for running experiments in the paper), and running the code in `scripts/experiment_runner.py` directly, ensuring you have a `bencher` server running and accessible at `localhost:50051`. The correct arguments to provide to `experiment_runner.py` can be inferred from the "Experiment Commands" section below.
+Note that if you wish to run experiments without using the SLURM scripts, or pulling the Singularity image for `bo-arena`, you can do so by creating a virtual environment with the dependencies specified in `uv.lock` (which were used for running experiments in the paper), and running the code in `scripts/experiment_runner.py` directly, ensuring you have a `bencher` server running and accessible at `localhost:50051`. The correct arguments to provide to `experiment_runner.py` can be inferred from the "Experiment Commands" section below.
 
 ### Experiment Commands
 

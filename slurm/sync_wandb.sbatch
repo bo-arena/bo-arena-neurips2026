@@ -11,6 +11,7 @@
 #
 # Usage:
 #   bash slurm/submit.sh sync_wandb.sbatch
+#   bash slurm/submit.sh --gpu sync_wandb.sbatch   # if CPU nodes are unavailable
 #
 # Optional environment variables:
 #   INCLUDE_SYNCED     - if non-empty, also re-sync runs that are already marked

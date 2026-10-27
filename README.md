@@ -46,7 +46,7 @@ cluster-specific paths, partition names and WandB credentials (if running with W
 as is the default behaviour). This file is gitignored.
 2. Obtain the Singularity images, which are expected to be in an `images/` directory.
     - **`bencher`**: pull with `bash slurm/submit.sh pull_bencher_singularity.sbatch`.
-    - **`bo-arena`**: pull with `bash slurm/submit.sh build_bo_arena_singularity.sbatch`.
+    - **`bo-arena`**: pull with `bash slurm/submit.sh pull_bo_arena_singularity.sbatch`.
 
    The exact images used for running the experiments in the paper will be released upon publication.
 3. Run experiments with `submit.py`. Commands used to run the experiments can be found below. Note that `submit.py` performs operations such as setting time and memory limits, and deciding whether to run on CPU or GPU depending on the algorithm/task being run, so you may wish to edit this depending on your specific cluster setup. The main code for actually running the experiments, which is executed via `submit.py`, can be found in `scripts/experiment_runner.py`. The core logic is very similar to the code snippet provided in our paper, with additional code added for performing tasks such as (optionally) initialising a WandB run, setting up a logger, ensuring the working tree is clean for reproducibility, and saving results.

@@ -2,7 +2,7 @@
 
 import numpy as np
 import torch
-from botorch.acquisition import qLogNoisyExpectedImprovement
+from botorch.acquisition import LogExpectedImprovement, qLogExpectedImprovement
 from botorch.fit import fit_gpytorch_mll
 from botorch.generation import gen_candidates_scipy
 from botorch.models import SingleTaskGP
@@ -24,7 +24,7 @@ class IBNN(AskTellAgent):
 
     Fits a GP whose covariance is the kernel of an infinite-width fully-connected ReLU
     network (Lee et al., 2018), as used for BO by Li et al. (2024), and selects points
-    using the qLogNEI acquisition function.
+    using the LogEI acquisition function.
 
     The kernel's weight and bias variances are fitted by marginal likelihood alongside
     the mean and noise. See `IBNNLi2024` for the paper-faithful variant, which holds
@@ -147,9 +147,10 @@ class IBNN(AskTellAgent):
         self._fit_model()
 
     def ask(self, n: int, seed: int) -> Float[np.ndarray, "{n} D"]:  # ruff: ignore[unused-method-argument]
-        """Select the next points to evaluate using qLogNoisyExpectedImprovement.
+        """Select the next points to evaluate using Log Expected Improvement (LogEI).
 
-        This method optimizes the qLogNEI acquisition function.
+        This method optimizes the LogEI (or qLogEI for batch size > 1) acquisition
+        function.
 
         Args:
             n: Number of points to select (used for batch BO).
@@ -167,10 +168,12 @@ class IBNN(AskTellAgent):
             msg = "Model has not been initialized. Call tell_initial_data first."
             raise RuntimeError(msg)
 
-        # Use qLogNEI for consistency with Vanilla BO and Ax
-        acq_func = qLogNoisyExpectedImprovement(
-            model=self.model, X_baseline=self.train_X
-        )
+        best_f = self.train_y.max()
+
+        if n == 1:
+            acq_func = LogExpectedImprovement(model=self.model, best_f=best_f)
+        else:
+            acq_func = qLogExpectedImprovement(model=self.model, best_f=best_f)
 
         candidates, _ = optimize_acqf(
             acq_func,
@@ -196,8 +199,7 @@ class IBNNLi2024(IBNN):
       LogNormal prior instead.
 
     Note that the acquisition function is *not* matched: Li et al. use qEI whereas this
-    agent utilises the more numerically stable qLogNEI, with the noisy variant used for
-    consistency with Vanilla BO and Ax.
+    agent utilises the more numerically stable LogEI.
 
     Reference:
         Li, Y. L., Rudner, T. G. J., & Wilson, A. G. (2024). A Study of Bayesian

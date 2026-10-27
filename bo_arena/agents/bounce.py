@@ -11,8 +11,9 @@ import torch
 from botorch import gen_candidates_scipy
 from botorch.acquisition import (
     ExpectedImprovement,
+    LogExpectedImprovement,
     qExpectedImprovement,
-    qLogNoisyExpectedImprovement,
+    qLogExpectedImprovement,
 )
 from botorch.exceptions import ModelFittingError
 from botorch.fit import fit_gpytorch_mll
@@ -463,9 +464,9 @@ class Bounce(AskTellAgent):
             use_dsp: If True, use BoTorch's default SingleTaskGP (Hvarfner's
               Dimensionality-Scaled Prior) instead of the Matern-2.5 + ARD + Gamma
               priors used in the original Bounce paper.
-            use_log_ei: If True, use qLogNEI instead of standard EI for improved
-              numerical stability. Note that the original paper used standard EI, so
-              the default is False to preserve that behavior.
+            use_log_ei: If True, use LogEI (or qLogEI if batch size > 1) instead of
+              standard EI for improved numerical stability. Note that the original
+              paper used standard EI, so the default is False to preserve that behavior.
             dtype: The torch dtype to use for the model and data.
             device: The torch device to use for the model and data.
             kwargs: Additional arguments (ignored).
@@ -784,9 +785,9 @@ class Bounce(AskTellAgent):
             self._fit_model()
 
     def ask(self, n: int, seed: int) -> Float[np.ndarray, "{n} D"]:
-        """Select candidate points via (q)(log)(N)EI optimization in the trust region.
+        """Select candidate points via (log)(q)EI optimization in the trust region.
 
-        Optimizes (q)(log)(N)EI over the trust region in the low-dimensional subspace,
+        Optimizes (log)(q)EI over the trust region in the low-dimensional subspace,
         then projects candidates back to the full space.
 
         Args:
@@ -822,16 +823,14 @@ class Bounce(AskTellAgent):
         )
         bounds = torch.stack([tr_lb, tr_ub], dim=0)
 
-        # Optimize (q)(log)(N)EI over the trust region
+        # Optimize (log)(q)EI over the trust region
         best_f = float(self.train_y.max().item())
         with gpytorch.settings.max_cholesky_size(float("inf")):  # Always use Cholesky
             if n == 1:
-                if self.use_log_ei:
-                    acqf = qLogNoisyExpectedImprovement(
-                        model=self.model, X_baseline=self.train_X
-                    )
-                else:
-                    acqf = ExpectedImprovement(model=self.model, best_f=best_f)
+                acqfn_class = (
+                    LogExpectedImprovement if self.use_log_ei else ExpectedImprovement
+                )
+                acqf = acqfn_class(model=self.model, best_f=best_f)
                 if self.acqf_opt_strategy == "default":
                     candidates, _ = optimize_acqf(
                         acq_function=acqf,
@@ -908,20 +907,17 @@ class Bounce(AskTellAgent):
                 cand_list: list[torch.Tensor] = []
                 for _ in range(n):
                     x_pending = torch.cat(cand_list, dim=0) if cand_list else None
-                    if self.use_log_ei:
-                        acqf = qLogNoisyExpectedImprovement(
-                            model=self.model,
-                            X_baseline=self.train_X,
-                            sampler=sampler,
-                            X_pending=x_pending,
-                        )
-                    else:
-                        acqf = qExpectedImprovement(
-                            model=self.model,
-                            best_f=best_f,
-                            sampler=sampler,
-                            X_pending=x_pending,
-                        )
+                    acqfn_class = (
+                        qLogExpectedImprovement
+                        if self.use_log_ei
+                        else qExpectedImprovement
+                    )
+                    acqf = acqfn_class(
+                        model=self.model,
+                        best_f=best_f,
+                        sampler=sampler,
+                        X_pending=x_pending,
+                    )
                     x_new, _ = optimize_acqf(
                         acq_function=acqf,
                         bounds=bounds,

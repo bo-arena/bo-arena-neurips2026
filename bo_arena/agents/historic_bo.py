@@ -2,7 +2,10 @@
 
 import numpy as np
 import torch
-from botorch.acquisition import qNoisyExpectedImprovement
+from botorch.acquisition import (
+    ExpectedImprovement,
+    qExpectedImprovement,
+)
 from botorch.fit import fit_gpytorch_mll
 from botorch.generation import gen_candidates_scipy
 from botorch.models import SingleTaskGP
@@ -24,12 +27,11 @@ class HistoricBO(AskTellAgent):
 
     This agent implements a typical GP-based BO approach prior to the introduction of
     DSP in Hvarfner et al. (2024), and logEI in Ament et al. (2023). In particular, it
-    uses the standard Expected Improvement (EI) acquisition function (specifically the
-    qNoisy variant, for consistency with VanillaBO and Ax, which use qLogNEI), and a
-    GP with a Matérn-5/2 kernel with a lengthscale prior of Gamma(3, 6) and an
-    outputscale prior of Gamma(2, 0.15). It also uses a Gamma(1.1, 0.05) prior on the
-    noise, with a minimum noise value of 1e-4. These were  the defaults in BoTorch
-    prior to the 0.12 release: https://github.com/meta-pytorch/botorch/releases/tag/v0.12.0.
+    uses the standard Expected Improvement (EI) acquisition function, and a GP with a
+    Matérn-5/2 kernel with a lengthscale prior of Gamma(3, 6) and an outputscale prior
+    of Gamma(2, 0.15). It also uses a Gamma(1.1, 0.05) prior on the noise, with a
+    minimum noise value of 1e-4. These were  the defaults in BoTorch prior to the 0.12
+    release: https://github.com/meta-pytorch/botorch/releases/tag/v0.12.0.
 
     Reference:
         Hvarfner, C., Hellsten, E. O., & Nardi, L. (2024). Vanilla Bayesian Optimization
@@ -183,8 +185,19 @@ class HistoricBO(AskTellAgent):
             msg = "Model has not been initialized. Call tell_initial_data first."
             raise RuntimeError(msg)
 
-        # Use qNoisy variant for consistency with Vanilla BO and Ax
-        acq_func = qNoisyExpectedImprovement(model=self.model, X_baseline=self.train_X)
+        best_f = self.train_y.max()
+
+        if n == 1:
+            acq_func = ExpectedImprovement(
+                model=self.model,
+                best_f=best_f,
+            )
+        else:
+            # Use MC version for batch
+            acq_func = qExpectedImprovement(
+                model=self.model,
+                best_f=best_f,
+            )
 
         candidates, _ = optimize_acqf(
             acq_func,

@@ -50,6 +50,19 @@ RESOURCE_PROFILES = {
         "mem": "6G",
         "time": "48:00:00",
     },
+    # Used for long runs (e.g. 20k evals)
+    "window_vanilla_bo": {
+        "device": "cpu",
+        "cpus": 4,
+        "mem": "6G",
+        "time": "96:00:00",
+    },
+    "best_window_vanilla_bo": {
+        "device": "cpu",
+        "cpus": 4,
+        "mem": "6G",
+        "time": "96:00:00",
+    },
 }
 
 # ---------------------------------------------------------------------------

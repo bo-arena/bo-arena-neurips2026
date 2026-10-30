@@ -103,11 +103,20 @@ if [ "$IS_SYNTHETIC" -eq 0 ]; then
     BENCHER_ADDRESS="unix:$BENCHER_ROUTER_SOCK"
     echo "Bencher sockets: $BENCHER_SOCKET_DIR"
 
+    # Give bencher a private /tmp: mujoco_py hard-codes /tmp/mujocopy-buildlock,
+    # which collides with other users' jobs on shared nodes.
+    BENCHER_TMP="${TMPDIR:-/tmp}/bencher-tmp-$SLURM_JOB_ID"
+    mkdir -p "$BENCHER_TMP"
+
     # Start bencher as a background sidecar.
-    singularity run --bind "$BENCHER_SOCKET_DIR" --env "$BENCHER_ENV" "$BENCHER_IMAGE" &
+    singularity run \
+        --bind "$BENCHER_SOCKET_DIR" \
+        --bind "$BENCHER_TMP:/tmp" \
+        --env "$BENCHER_ENV" \
+        "$BENCHER_IMAGE" &
     BENCHER_PID=$!
-    trap 'kill $BENCHER_PID 2>/dev/null; rm -rf "$BENCHER_SOCKET_DIR"; exit' TERM
-    trap 'kill $BENCHER_PID 2>/dev/null; rm -rf "$BENCHER_SOCKET_DIR"' EXIT
+    trap 'kill $BENCHER_PID 2>/dev/null; rm -rf "$BENCHER_SOCKET_DIR" "$BENCHER_TMP"; exit' TERM
+    trap 'kill $BENCHER_PID 2>/dev/null; rm -rf "$BENCHER_SOCKET_DIR" "$BENCHER_TMP"' EXIT
 
     # Wait for Bencher services to be ready.
     echo "Starting up bencher server"

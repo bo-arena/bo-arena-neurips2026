@@ -54,7 +54,7 @@ plot_cum_max_y_custom(
 # %%
 plot_cum_max_y_custom(
     agents={
-        "turbo": ["default", "no_raasp"],
+        "turbo": ["raasp", "no_raasp"],
         "vanilla_bo": ["botorch_raasp", "no_raasp"],
     },
     problems=["mopta08", "lasso-dna", "svm"],
@@ -71,7 +71,7 @@ plot_cum_max_y_custom(
 plot_cum_max_y_custom(
     agents={
         "vanilla_bo": ["botorch_raasp"],
-        "turbo": ["default"],
+        "turbo": ["raasp"],
         "turbo_dsp": ["raasp"],
         "turbo_log_ei": ["raasp"],
         "turbo_log_ei_dsp": ["raasp"],

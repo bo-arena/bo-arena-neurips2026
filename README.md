@@ -48,7 +48,11 @@ as is the default behaviour). This file is gitignored.
     - **`bencher`**: pull with `bash slurm/submit.sh pull_bencher_singularity.sbatch`.
     - **`bo-arena`**: pull with `bash slurm/submit.sh pull_bo_arena_singularity.sbatch`.
 
-   The exact images used for running the experiments in the paper will be released upon publication.
+   The Docker images used to generate the Singularity `.sif` images for running experiments were:
+   - **`bencher`**: `docker://tchristie/bencher@sha256:a7ca83f6d0b3810ed8dc03bb210aa35c46e65d5d19e4371aa7dbf038be3b6467`.
+   - **`bo-arena`**: `docker://tchristie/bo-arena@sha256:e1eb20f52187709dd3f325e103cf48805fd48b18449366c91d112bdf02a403a1`.
+
+   The exact Singularity `.sif` images used for running the experiments in the paper can be found [here](https://drive.google.com/drive/folders/1HCIabVFaGDb_4sDIJ_mUK9PBOEQKXhTC?usp=sharing).
 3. Run experiments with `submit.py`. Commands used to run the experiments can be found below. Note that `submit.py` performs operations such as setting time and memory limits, and deciding whether to run on CPU or GPU depending on the algorithm/task being run, so you may wish to edit this depending on your specific cluster setup. The main code for actually running the experiments, which is executed via `submit.py`, can be found in `scripts/experiment_runner.py`. The core logic is very similar to the code snippet provided in our paper, with additional code added for performing tasks such as (optionally) initialising a WandB run, setting up a logger, ensuring the working tree is clean for reproducibility, and saving results.
 4. (Optional, if using WandB) - Sync WandB results after experiments finish using `bash slurm/submit.sh sync_wandb.sbatch`. Experiments log to WandB in offline mode to avoid API rate limits with many concurrent jobs.
 

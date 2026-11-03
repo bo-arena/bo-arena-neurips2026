@@ -31,7 +31,7 @@ plot_cum_max_y_custom(
     appendix_ncols=3,
     appendix_height_to_width_ratio=0.83,
     agent_name_mapping={"vanilla_bo": "Vanilla BO (Hvarfner et al., 2024)"},
-    filename="yu_2026",
+    filename="vanilla_bo_reimplementation",
 )
 
 # %%

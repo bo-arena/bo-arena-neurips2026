@@ -60,7 +60,16 @@ BENCHER_SOCKET_TIMEOUT=600   # seconds for all nine sockets to appear
 BENCHER_ACCEPT_TIMEOUT=120   # seconds for the router to start accepting
 
 if [ "$IS_SYNTHETIC" -eq 0 ]; then
-    BENCHER_SOCKET_DIR="${TMPDIR:-/tmp}/bencher-$SLURM_JOB_ID"
+    # Bound over the bencher sidecar's /tmp to make it private: mujoco_py hard-codes
+    # /tmp/mujocopy-buildlock, which can end up writing to a non job-local /tmp
+    # directory.
+    BENCHER_TMP="${TMPDIR:-/tmp}/bencher-$SLURM_JOB_ID"
+
+    # The sockets live inside BENCHER_TMP, so they have two paths: the bencher sidecar
+    # sees BENCHER_CONTAINER_SOCKET_DIR, everything else (this script and the experiment
+    # container) sees BENCHER_SOCKET_DIR.
+    BENCHER_SOCKET_DIR="$BENCHER_TMP/sockets"
+    BENCHER_CONTAINER_SOCKET_DIR="/tmp/sockets"
 
     # AF_UNIX caps the whole path at 108 bytes (sun_path).
     if [ $(( ${#BENCHER_SOCKET_DIR} + 16 )) -ge 108 ]; then
@@ -87,7 +96,7 @@ if [ "$IS_SYNTHETIC" -eq 0 ]; then
         echo "Error: cannot create a unix socket in $BENCHER_SOCKET_DIR."
         echo "That filesystem may not support AF_UNIX."
         echo "Set TMPDIR to node-local storage."
-        rm -rf "$BENCHER_SOCKET_DIR"
+        rm -rf "$BENCHER_TMP"
         exit 1
     fi
 
@@ -95,19 +104,23 @@ if [ "$IS_SYNTHETIC" -eq 0 ]; then
     # Build singularity's --env list: a socket per service, named from the variable stem.
     BENCHER_ENV=""
     for svc in "${BENCHER_SERVICES[@]}"; do
-        sock="$BENCHER_SOCKET_DIR/$(echo "$svc" | tr '[:upper:]' '[:lower:]').sock"
-        BENCHER_ENV="${BENCHER_ENV:+$BENCHER_ENV,}BENCHER_${svc}_HOST=unix:$sock"
-        if [ "$svc" = SERVER ]; then BENCHER_ROUTER_SOCK="$sock"; fi
+        sock="$(echo "$svc" | tr '[:upper:]' '[:lower:]').sock"
+        BENCHER_ENV="${BENCHER_ENV:+$BENCHER_ENV,}BENCHER_${svc}_HOST=unix:$BENCHER_CONTAINER_SOCKET_DIR/$sock"
+        if [ "$svc" = SERVER ]; then BENCHER_ROUTER_SOCK="$BENCHER_SOCKET_DIR/$sock"; fi
     done
 
     BENCHER_ADDRESS="unix:$BENCHER_ROUTER_SOCK"
     echo "Bencher sockets: $BENCHER_SOCKET_DIR"
 
     # Start bencher as a background sidecar.
-    singularity run --bind "$BENCHER_SOCKET_DIR" --env "$BENCHER_ENV" "$BENCHER_IMAGE" &
+    singularity run \
+        --bind "$BENCHER_TMP:/tmp" \
+        --env TMPDIR=/tmp \
+        --env "$BENCHER_ENV" \
+        "$BENCHER_IMAGE" &
     BENCHER_PID=$!
-    trap 'kill $BENCHER_PID 2>/dev/null; rm -rf "$BENCHER_SOCKET_DIR"; exit' TERM
-    trap 'kill $BENCHER_PID 2>/dev/null; rm -rf "$BENCHER_SOCKET_DIR"' EXIT
+    trap 'kill $BENCHER_PID 2>/dev/null; rm -rf "$BENCHER_TMP"; exit' TERM
+    trap 'kill $BENCHER_PID 2>/dev/null; rm -rf "$BENCHER_TMP"' EXIT
 
     # Wait for Bencher services to be ready.
     echo "Starting up bencher server"
@@ -138,7 +151,6 @@ if [ "$IS_SYNTHETIC" -eq 0 ]; then
     echo "Bencher server started"
 else
     echo "Synthetic problem '$PROBLEM' — skipping Bencher server startup"
-    BENCHER_SOCKET_DIR="${TMPDIR:-/tmp}"   # nothing is bound; keeps the bind flag valid
     BENCHER_ADDRESS="127.0.0.1"            # unused, but the runner still takes an address
 fi
 

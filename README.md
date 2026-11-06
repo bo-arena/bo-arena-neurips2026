@@ -38,7 +38,7 @@ We use Unix sockets rather than fixed TCP ports to prevent different SLURM jobs 
 
 > **⚠️ Warning**
 >
-> Important - The run_experiment.sbatch script creates socket files for communicating with bencher under the directory $TMPDIR/bencher-$SLURM_JOB_ID (falling back to /tmp/bencher-$SLURM_JOB_ID if $TMPDIR is not set). The script generally removes this directory (and the created sockets) once it has finished running, but in some cases (e.g. SIGKILL) it will not. Ideally $TMPDIR should be a job-specific temporary directory, so it will get deleted once the job finishes running in any case (on many clusters this is the case). If not, be careful, as $TMPDIR could get cluttered with directories containing socket files.
+> Important - The run_experiment.sbatch script creates the directory $TMPDIR/bencher-$SLURM_JOB_ID (falling back to /tmp/bencher-$SLURM_JOB_ID if $TMPDIR is not set). It holds the socket files for communicating with bencher and is also mounted as the `bencher` container's /tmp, so it can contain bencher's temporary files too. The script generally removes this directory once it has finished running, but in some cases (e.g. SIGKILL) it will not. Ideally $TMPDIR should be a job-specific temporary directory, so it will get deleted once the job finishes running in any case (on many clusters this is the case). If not, be careful, as $TMPDIR could get cluttered with these directories.
 
 In order to run experiments, follow these steps:
 1. Copy `slurm/config.sh.example` to `slurm/config.sh` and fill in your
